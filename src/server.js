@@ -11,6 +11,8 @@ const config = require('./config');
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const chatRoutes = require('./routes/chatRoutes');
+const userRoutes = require('./routes/userRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 const Message = require('./models/Message');
 
 // Inicializar Express
@@ -37,6 +39,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Ruta principal
 app.get('/', (req, res) => {
@@ -151,3 +155,4 @@ server.listen(config.port, () => {
 });
 
 module.exports = { app, server, io };
+

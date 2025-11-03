@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Configuración de Perfil</title>
+  <link rel="stylesheet" href="/styles.css"/>
+</head>
+<body>
+  <div class="animated-bg"></div>
+
+  <!-- Header -->
+  <header>
+    <nav>
+      <div class="logo">Portal Productos</div>
+      <div class="nav-links" id="navLinks">
+        <a href="/">Productos</a>
+        <a href="/chat.html" id="chatLink" style="display: none;">Chat</a>
+        <div class="user-info" id="userInfo" style="display: none;">
+          <div class="user-avatar" id="userAvatar"></div>
+          <div>
+            <div id="userName"></div>
+            <span class="role-badge" id="userRole"></span>
+          </div>
+          <a href="/settings.html" class="btn btn-secondary">Configuración</a>
+          <button class="btn btn-secondary" id="logoutBtn">Cerrar Sesión</button>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Contenido Principal -->
+  <main class="container">
+    <div class="settings-container">
+      <!-- Sidebar con navegación -->
+      <aside class="settings-sidebar">
+        <div class="settings-menu">
+          <button class="settings-menu-item active" data-section="profile">👤 Perfil</button>
+          <button class="settings-menu-item" data-section="appearance">🎨 Apariencia</button>
+          <button class="settings-menu-item" data-section="password">🔒 Contraseña</button>
+          <button class="settings-menu-item" data-section="account">⚙️ Cuenta</button>
+          <a href="/admin-panel.html" class="settings-menu-item admin-only" style="display: none;" id="adminPanelLink">👨‍💼 Panel Admin</a>
+        </div>
+      </aside>
+
+      <!-- Contenido de secciones -->
+      <div class="settings-content">
+
+        <!-- Sección Perfil -->
+        <section id="profile-section" class="settings-section active">
+          <h2>Mi Perfil</h2>
+
+          <!-- Los mensajes usarán .settings-alert.success / .settings-alert.error -->
+          <div id="profileAlert"></div>
+
+          <form id="profileForm" class="settings-form">
+            <div class="form-group">
+              <label for="profileName">Nombre</label>
+              <input type="text" id="profileName" required />
+            </div>
+
+            <div class="form-group">
+              <label for="profileEmail">Email (No editable)</label>
+              <input type="email" id="profileEmail" disabled />
+            </div>
+
+            <div class="form-group">
+              <label for="profileBio">Biografía</label>
+              <textarea id="profileBio" placeholder="Cuéntanos sobre ti..." maxlength="500"></textarea>
+              <small id="bioCounter">0/500</small>
+            </div>
+
+            <div class="form-group">
+              <label for="profileImage">URL de Foto de Perfil</label>
+              <input type="url" id="profileImage" placeholder="https://ejemplo.com/foto.jpg" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+          </form>
+        </section>
+
+        <!-- Sección Apariencia -->
+        <section id="appearance-section" class="settings-section">
+          <h2>Apariencia</h2>
+
+          <div id="appearanceAlert"></div>
+
+          <div class="form-group">
+            <label>Color de Perfil</label>
+            <p class="form-description">Elige uno de los 8 gradientes disponibles para tu perfil</p>
+
+            <div class="gradient-selector">
+              <div class="gradient-grid" id="gradientGrid">
+                <!-- Los gradientes se cargarán aquí -->
+              </div>
+            </div>
+
+            <div class="gradient-preview">
+              <p>Vista previa:</p>
+              <div class="preview-avatar" id="previewAvatar"></div>
+            </div>
+          </div>
+
+          <button type="button" class="btn btn-primary" id="saveColorBtn">Guardar Color</button>
+        </section>
+
+        <!-- Sección Contraseña -->
+        <section id="password-section" class="settings-section">
+          <h2>Cambiar Contraseña</h2>
+
+          <div id="passwordAlert"></div>
+
+          <form id="passwordForm" class="settings-form">
+            <div class="form-group">
+              <label for="currentPassword">Contraseña Actual</label>
+              <input type="password" id="currentPassword" required />
+            </div>
+
+            <div class="form-group">
+              <label for="newPassword">Nueva Contraseña</label>
+              <input type="password" id="newPassword" required />
+              <small>Mínimo 6 caracteres</small>
+            </div>
+
+            <div class="form-group">
+              <label for="confirmPassword">Confirmar Nueva Contraseña</label>
+              <input type="password" id="confirmPassword" required />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Actualizar Contraseña</button>
+          </form>
+        </section>
+
+        <!-- Sección Cuenta -->
+        <section id="account-section" class="settings-section">
+          <h2>Configuración de Cuenta</h2>
+
+          <div class="account-info">
+            <h3>Información de Cuenta</h3>
+            <div class="info-item">
+              <span class="label">Usuario desde:</span>
+              <span id="createdDate"></span>
+            </div>
+            <div class="info-item">
+              <span class="label">Última actualización:</span>
+              <span id="updatedDate"></span>
+            </div>
+            <div class="info-item">
+              <span class="label">Rol:</span>
+              <span id="userRoleInfo"></span>
+            </div>
+          </div>
+
+          <div class="account-danger">
+            <h3>Zona de Peligro</h3>
+            <p>Estas acciones son permanentes y no pueden deshacerse.</p>
+            <button type="button" class="btn btn-danger" id="deleteAccountBtn">Eliminar Cuenta</button>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal de confirmación -->
+  <div class="modal" id="confirmModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="confirmTitle">Confirmar Acción</h3>
+        <button class="close-modal" id="closeConfirmModal">&times;</button>
+      </div>
+
+      <p id="confirmMessage"></p>
+      <div id="confirmExtra"></div>
+
+      <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+        <button type="button" class="btn btn-primary" id="confirmBtn" style="flex: 1;">Confirmar</button>
+        <button type="button" class="btn btn-secondary" id="cancelConfirmBtn" style="flex: 1;">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>&copy; Portal de Productos</p>
+  </footer>
+
+  <script src="/settings.js"></script>
+</body>
+</html>

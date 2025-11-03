@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de Administración</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="animated-bg"></div>
+
+  <!-- Header -->
+  <header>
+    <nav>
+      <div class="logo">Panel Admin</div>
+      <div class="nav-links" id="navLinks">
+        <a href="/">Productos</a>
+        <a href="/settings.html" class="btn btn-secondary">Configuración</a>
+        <button class="btn btn-secondary" id="logoutBtn">Cerrar Sesión</button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Contenido Principal -->
+  <main class="container">
+    <div class="admin-container">
+      <!-- Sidebar de navegación -->
+      <aside class="admin-sidebar">
+        <div class="admin-menu">
+          <button class="admin-menu-item active" data-section="dashboard">
+            📊 Dashboard
+          </button>
+          <button class="admin-menu-item" data-section="users">
+            👥 Usuarios
+          </button>
+          <button class="admin-menu-item" data-section="products">
+            📦 Productos
+          </button>
+          <button class="admin-menu-item" data-section="activity">
+            📋 Actividad
+          </button>
+        </div>
+      </aside>
+
+      <!-- Contenido -->
+      <div class="admin-content">
+        <!-- Dashboard -->
+        <section id="dashboard-section" class="admin-section active">
+          <div class="section-header">
+            <h1>Dashboard</h1>
+          </div>
+          
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon">👥</div>
+              <div class="stat-info">
+                <div class="stat-label">Usuarios Totales</div>
+                <div class="stat-value" id="totalUsers">-</div>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon">🆕</div>
+              <div class="stat-info">
+                <div class="stat-label">Usuarios Esta Semana</div>
+                <div class="stat-value" id="newUsersWeek">-</div>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon">📦</div>
+              <div class="stat-info">
+                <div class="stat-label">Productos</div>
+                <div class="stat-value" id="totalProducts">-</div>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon">💬</div>
+              <div class="stat-info">
+                <div class="stat-label">Mensajes</div>
+                <div class="stat-value" id="totalMessages">-</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="dashboard-grid">
+            <!-- Actividad Reciente -->
+            <div class="dashboard-card">
+              <h2>Usuarios Recientes</h2>
+              <div id="recentUsersList" class="activity-list"></div>
+            </div>
+
+            <!-- Productos Recientes -->
+            <div class="dashboard-card">
+              <h2>Productos Recientes</h2>
+              <div id="recentProductsList" class="activity-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Gestión de Usuarios -->
+        <section id="users-section" class="admin-section">
+          <div class="section-header">
+            <h1>Gestión de Usuarios</h1>
+            <div class="search-bar">
+              <input type="text" id="usersSearch" placeholder="Buscar por nombre o email...">
+              <select id="roleFilter">
+                <option value="">Todos los roles</option>
+                <option value="user">Usuario</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="usersAlert"></div>
+
+          <div class="table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Email</th>
+                  <th>Rol</th>
+                  <th>Registrado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody">
+                <tr>
+                  <td colspan="5" style="text-align: center; padding: 2rem;">Cargando...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="pagination" id="usersPagination"></div>
+        </section>
+
+        <!-- Gestión de Productos -->
+        <section id="products-section" class="admin-section">
+          <div class="section-header">
+            <h1>Gestión de Productos</h1>
+          </div>
+
+          <div id="productsAlert"></div>
+
+          <div class="table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th>Precio</th>
+                  <th>Propietario</th>
+                  <th>Creado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="productsTableBody">
+                <tr>
+                  <td colspan="5" style="text-align: center; padding: 2rem;">Cargando...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="pagination" id="productsPagination"></div>
+        </section>
+
+        <!-- Actividad -->
+        <section id="activity-section" class="admin-section">
+          <div class="section-header">
+            <h1>Registro de Actividad</h1>
+          </div>
+
+          <div class="activity-container">
+            <div class="activity-card">
+              <h2>Últimos Usuarios Registrados</h2>
+              <div id="activityUsers" class="activity-list"></div>
+            </div>
+
+            <div class="activity-card">
+              <h2>Últimos Productos</h2>
+              <div id="activityProducts" class="activity-list"></div>
+            </div>
+
+            <div class="activity-card">
+              <h2>Últimos Mensajes</h2>
+              <div id="activityMessages" class="activity-list"></div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal de edición de usuario -->
+  <div class="modal" id="editUserModal" role="dialog" aria-modal="true" aria-labelledby="editUserTitle" tabindex="-1">
+    <div class="modal-content" role="document">
+      <div class="modal-header">
+        <h3 id="editUserTitle">Editar Usuario</h3>
+        <button class="close-modal" id="closeEditModal" aria-label="Cerrar">&times;</button>
+      </div>
+
+      <form id="editUserForm" class="modal-form">
+        <input type="hidden" id="editUserId">
+        
+        <div class="form-group">
+          <label for="editUserName">Nombre</label>
+          <input type="text" id="editUserName" required>
+        </div>
+
+        <div class="form-group">
+          <label for="editUserRole">Rol</label>
+          <select id="editUserRole" required>
+            <option value="user">Usuario</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Guardar</button>
+          <button type="button" class="btn btn-secondary" id="cancelEditBtn" style="flex: 1;">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal de confirmación de eliminación -->
+  <div class="modal" id="deleteConfirmModal" role="dialog" aria-modal="true" aria-labelledby="deleteConfirmTitle" tabindex="-1">
+    <div class="modal-content" role="document">
+      <div class="modal-header">
+        <h3 id="deleteConfirmTitle">Confirmar Eliminación</h3>
+        <button class="close-modal" id="closeDeleteModal" aria-label="Cerrar">&times;</button>
+      </div>
+
+      <p id="deleteMessage"></p>
+
+      <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+        <button type="button" class="btn btn-danger" id="confirmDeleteBtn" style="flex: 1;">Eliminar</button>
+        <button type="button" class="btn btn-secondary" id="cancelDeleteBtn" style="flex: 1;">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>&copy; Panel de Administración</p>
+  </footer>
+
+  <script src="/admin-panel.js"></script>
+</body>
+</html>
