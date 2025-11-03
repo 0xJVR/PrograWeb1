@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registrarse - Portal de Productos</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="animated-bg"></div>
+
+  <!-- Header -->
+  <header>
+    <nav>
+      <div class="logo">Portal Productos</div>
+      <div class="nav-links">
+        <a href="/">Productos</a>
+        <a href="/login.html">Iniciar Sesión</a>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Formulario de Registro -->
+  <div class="form-container">
+    <h2>Crear Cuenta</h2>
+    
+    <div id="alertContainer"></div>
+    
+    <form id="registerForm">
+      <div class="form-group">
+        <label for="name">Nombre Completo</label>
+        <input type="text" id="name" placeholder="Juan Pérez" required>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" placeholder="tu@email.com" required>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Contraseña</label>
+        <input type="password" id="password" placeholder="Mínimo 6 caracteres" minlength="6" required>
+      </div>
+
+      <div class="form-group">
+        <label for="confirmPassword">Confirmar Contraseña</label>
+        <input type="password" id="confirmPassword" placeholder="Repite tu contraseña" required>
+      </div>
+
+      <div class="form-group">
+        <label for="role">Tipo de Usuario</label>
+        <select id="role" style="width: 100%; padding: 0.75rem; background: var(--color-bg-lighter); border: 1px solid var(--color-border); border-radius: 8px; color: var(--color-text); font-size: 1rem;">
+          <option value="user">Usuario Estándar</option>
+          <option value="admin">Administrador</option>
+        </select>
+        <small style="color: var(--color-text-muted); display: block; margin-top: 0.5rem;">
+          Los administradores pueden gestionar productos
+        </small>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+        <span id="btnText">Registrarse</span>
+        <span id="btnLoading" style="display: none;">
+          <span class="loading"></span> Registrando...
+        </span>
+      </button>
+    </form>
+
+    <p style="text-align: center; margin-top: 1.5rem; color: var(--color-text-muted);">
+      ¿Ya tienes cuenta? 
+      <a href="/login.html" style="color: var(--color-primary);">Inicia sesión aquí</a>
+    </p>
+  </div>
+
+  <script>
+    // Verificar si ya está autenticado
+    const token = localStorage.getItem('token');
+    if (token) {
+      window.location.href = '/';
+    }
+
+    // Manejar envío del formulario
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const btnText = document.getElementById('btnText');
+      const btnLoading = document.getElementById('btnLoading');
+      const alertContainer = document.getElementById('alertContainer');
+      
+      alertContainer.innerHTML = '';
+
+      const name = document.getElementById('name').value;
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      const role = document.getElementById('role').value;
+
+      // Validar contraseñas
+      if (password !== confirmPassword) {
+        alertContainer.innerHTML = `
+          <div class="alert alert-error">
+            Las contraseñas no coinciden
+          </div>
+        `;
+        return;
+      }
+
+      btnText.style.display = 'none';
+      btnLoading.style.display = 'inline';
+
+      try {
+        const response = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ name, email, password, role })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Guardar token y usuario en localStorage
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          
+          alertContainer.innerHTML = `
+            <div class="alert alert-success">
+              ¡Registro exitoso! Redirigiendo...
+            </div>
+          `;
+          
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 1000);
+        } else {
+          alertContainer.innerHTML = `
+            <div class="alert alert-error">
+              ${data.message || 'Error al registrarse'}
+            </div>
+          `;
+          btnText.style.display = 'inline';
+          btnLoading.style.display = 'none';
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alertContainer.innerHTML = `
+          <div class="alert alert-error">
+            Error de conexión. Por favor, intenta de nuevo.
+          </div>
+        `;
+        btnText.style.display = 'inline';
+        btnLoading.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>

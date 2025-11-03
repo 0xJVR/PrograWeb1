@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal de Productos - Inicio</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="animated-bg"></div>
+
+  <!-- Header -->
+  <header>
+    <nav>
+      <div class="logo">Portal Productos</div>
+      <div class="nav-links" id="navLinks">
+        <a href="/">Productos</a>
+        <a href="/chat.html" id="chatLink" style="display: none;">Chat</a>
+        <a href="/login.html" id="loginLink">Iniciar Sesión</a>
+        <a href="/register.html" id="registerLink">Registrarse</a>
+        <div class="user-info" id="userInfo" style="display: none;">
+          <div class="user-avatar" id="userAvatar"></div>
+          <div>
+            <div id="userName"></div>
+            <span class="role-badge" id="userRole"></span>
+          </div>
+          <button class="btn btn-secondary" id="logoutBtn" style="display: none;">Cerrar Sesión</button>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Contenido Principal -->
+  <main class="container">
+    <!-- Mensaje de bienvenida -->
+    <div id="welcomeMessage" style="display: none;"></div>
+
+    <!-- Header de productos -->
+    <div class="products-header">
+      <h1>Nuestros Productos</h1>
+      <button class="btn btn-primary" id="addProductBtn" style="display: none;">
+        Agregar Producto
+      </button>
+    </div>
+
+    <!-- Grid de productos -->
+    <div class="products-grid" id="productsGrid">
+      <!-- Los productos se cargarán aquí dinámicamente -->
+    </div>
+
+    <!-- Indicador de carga -->
+    <div id="loadingIndicator" style="text-align: center; padding: 3rem;">
+      <div class="loading"></div>
+      <p style="margin-top: 1rem; color: var(--color-text-muted);">Cargando productos...</p>
+    </div>
+  </main>
+
+  <!-- Modal para crear/editar producto -->
+  <div class="modal" id="productModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">Agregar Producto</h3>
+        <button class="close-modal" id="closeModal">&times;</button>
+      </div>
+      
+      <div id="modalAlert"></div>
+      
+      <form id="productForm">
+        <input type="hidden" id="productId">
+        
+        <div class="form-group">
+          <label for="productName">Nombre del Producto</label>
+          <input type="text" id="productName" required>
+        </div>
+
+        <div class="form-group">
+          <label for="productPrice">Precio ($)</label>
+          <input type="number" id="productPrice" step="0.01" min="0" required>
+        </div>
+
+        <div class="form-group">
+          <label for="productDescription">Descripción</label>
+          <textarea id="productDescription" required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="productImage">URL de la Imagen</label>
+          <input type="url" id="productImage" placeholder="https://ejemplo.com/imagen.jpg">
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">
+            Guardar
+          </button>
+          <button type="button" class="btn btn-secondary" id="cancelBtn" style="flex: 1;">
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>&copy; Portal de Productos - Programación Web I</p>
+    <p>Javier Salmerón</p>
+  </footer>
+
+  <script src="/client.js"></script>
+</body>
+</html>
