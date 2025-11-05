@@ -1,0 +1,285 @@
+/* =========================
+   Settings Page CSS (scoped)
+   ========================= */
+
+   /* Panels visibility: hide all by default, show only the active one */
+.settings-content > .settings-section,
+.settings-content > .settings-panel,
+.settings-content > [data-section],
+.settings-content > [role="tabpanel"] {
+  display: none;
+}
+
+.settings-content > .settings-section.active,
+.settings-content > .settings-panel.active,
+.settings-content > [data-section].active,
+.settings-content > [role="tabpanel"][aria-hidden="false"] {
+  display: block;
+}
+
+/* If your JS toggles [hidden] or aria-hidden, support those too */
+.settings-content > .settings-section[hidden],
+.settings-content > .settings-panel[hidden],
+.settings-content > [data-section][hidden],
+.settings-content > [role="tabpanel"][aria-hidden="true"] {
+  display: none !important;
+}
+
+
+/* Page layout */
+.settings-container {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 2rem;
+    margin-top: 2rem;
+  }
+  
+  .settings-sidebar {
+    position: sticky;
+    top: 100px;
+    background: var(--color-bg-darker);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,.5);
+    height: fit-content;
+  }
+  
+  .settings-content {
+    background: var(--color-bg-darker);
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 10px 40px rgba(0,0,0,.5);
+    animation: fadeIn .6s ease;
+  }
+  
+  /* Sidebar menu (matches .settings-menu / .settings-menu-item in HTML) */
+  .settings-menu {
+    display: flex;
+    flex-direction: column;
+    padding: 0.75rem;
+    gap: .5rem;
+  }
+  
+  .settings-menu-item {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .9rem 1rem;
+    border-radius: 12px;
+    color: var(--color-text);
+    text-decoration: none;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    text-align: left;
+  }
+  
+  .settings-menu-item:hover {
+    background: var(--color-bg-lighter);
+    color: var(--color-primary);
+    transform: translateX(6px);
+  }
+  
+  .settings-menu-item.active {
+    background: linear-gradient(135deg, rgba(0,255,136,.2), rgba(0,204,255,.2));
+    border: 1px solid var(--color-primary);
+    color: var(--color-primary);
+    box-shadow: 0 0 15px rgba(0,255,136,.25);
+  }
+  
+  /* Optional admin badge link already present in HTML via .admin-only */
+  .settings-menu-item.admin-only {
+    color: var(--color-accent);
+  }
+  
+  /* Section blocks */
+  .settings-section {
+    background: var(--color-bg-lighter);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin-top: 1rem;
+    animation: fadeIn .6s ease;
+  }
+  
+  .settings-section + .settings-section { margin-top: 1rem; }
+  
+  .settings-section h2 {
+    margin: 0 0 .75rem;
+    font-size: 1.6rem;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* Settings forms (these classes exist in your HTML) */
+  .settings-form {
+    display: grid;
+    gap: 1rem;
+    max-width: 560px;
+  }
+  
+  /* Counters / help */
+  #bioCounter {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    font-size: .9rem;
+    color: var(--color-text-muted);
+  }
+  #bioCounter.ok   { color: var(--color-secondary); }
+  #bioCounter.warn { color: #ffb020; }
+  #bioCounter.error{ color: var(--color-error); }
+  
+  .help-text {
+    color: var(--color-text-muted);
+    font-size: .9rem;
+  }
+  
+  /* Gradient selector (matches your appearance section) */
+  .gradient-selector { margin: 1rem 0; }
+  
+  .gradient-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 1rem;
+    margin: 1.25rem 0;
+  }
+  
+  .gradient-item {
+    aspect-ratio: 1;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    border: 3px solid transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .gradient-item:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(0,255,136,.3);
+  }
+  .gradient-item.selected {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-primary), 0 8px 25px rgba(0,255,136,.4);
+  }
+  .gradient-item.selected::after {
+    content: '✓';
+    font-size: 1.5rem;
+    color: #fff;
+    font-weight: 700;
+    text-shadow: 0 0 8px rgba(0,0,0,.8);
+    animation: bounceIn .3s ease;
+  }
+  @keyframes bounceIn {
+    0% { transform: scale(0); }
+    70% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
+  
+  .gradient-preview {
+    background: var(--color-bg-lighter);
+    padding: 1.25rem;
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    text-align: center;
+  }
+  .preview-avatar {
+    width: 96px; height: 96px;
+    border-radius: 50%;
+    margin: .5rem auto 0;
+    display: grid; place-items: center;
+    font-size: 2rem; font-weight: 700; color: #000;
+    box-shadow: 0 8px 25px rgba(0,0,0,.3);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  
+  /* Account info / danger (matches your IDs/classes) */
+  .account-info {
+    background: var(--color-bg-dark);
+    padding: 1.25rem;
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    margin-bottom: 1rem;
+  }
+  .account-info h3 {
+    color: var(--color-primary);
+    margin: 0 0 .75rem;
+    font-size: 1.15rem;
+  }
+  .info-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: .75rem;
+    padding: .6rem 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .info-item:last-child { border-bottom: 0; }
+  .info-item .label { color: var(--color-text-muted); font-weight: 600; }
+  
+  .account-danger {
+    border: 1px solid rgba(255,68,68,.4);
+    background: rgba(255,68,68,.06);
+    border-radius: 14px;
+    padding: 1rem;
+  }
+  .account-danger h3 { color: var(--color-error); margin: 0 0 .5rem; }
+  .account-danger p  { color: var(--color-text-muted); }
+  
+  /* Tabs (if you toggle tabs inside a section) */
+  .settings-tabs {
+    display: flex; gap: .5rem; flex-wrap: wrap;
+    margin: .25rem 0 1rem;
+  }
+  .settings-tab {
+    padding: .4rem .8rem; border-radius: 999px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-dark);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+  .settings-tab[aria-selected="true"],
+  .settings-tab.active {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    box-shadow: 0 0 12px rgba(0,255,136,.15);
+  }
+  
+  /* Skeletons (for async loads) */
+  .skeleton {
+    position: relative; overflow: hidden;
+    background: rgba(255,255,255,.06);
+    border-radius: 8px;
+  }
+  .skeleton::after {
+    content: ""; position: absolute; inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.08), transparent);
+    animation: shimmer 1.2s infinite;
+  }
+  @keyframes shimmer { 100% { transform: translateX(100%); } }
+  
+  /* Responsive */
+  @media (max-width: 1200px) {
+    .settings-container { grid-template-columns: 240px 1fr; }
+  }
+  @media (max-width: 992px) {
+    .settings-container { grid-template-columns: 1fr; }
+    .settings-sidebar { position: static; }
+    .settings-menu { flex-direction: row; overflow-x: auto; padding-bottom: .5rem; }
+    .settings-menu-item { white-space: nowrap; flex-shrink: 0; }
+  }
+  @media (max-width: 640px) {
+    .settings-content { padding: 1rem; }
+    .account-info .info-item { grid-template-columns: 1fr; }
+    .preview-avatar { width: 80px; height: 80px; font-size: 1.5rem; }
+  }
+  
