@@ -72,7 +72,7 @@ router.post('/', authenticateJWT, requireAdmin, async (req, res) => {
       name,
       price,
       description,
-      image: image || undefined, // Usar imagen por defecto si no se proporciona
+      image: image,
       createdBy: req.user.id
     });
 
@@ -110,10 +110,10 @@ router.put('/:id', authenticateJWT, requireAdmin, async (req, res) => {
     }
 
     // Actualizar campos
-    if (name) product.name = name;
+    if (name !== undefined) product.name = name;
     if (price !== undefined) product.price = price;
-    if (description) product.description = description;
-    if (image) product.image = image;
+    if (description !== undefined) product.description = description;
+    if (image !== undefined) product.image = image; // Solo actualizar si se proporciona
 
     await product.save();
 

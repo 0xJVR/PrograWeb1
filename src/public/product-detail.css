@@ -1,0 +1,137 @@
+/* === Product Detail Page === */
+
+.product-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  animation: fadeIn .6s ease;
+}
+
+.product-detail-header .btn {
+  padding: .5rem 1rem;
+  font-size: .9rem;
+}
+
+.product-detail-card {
+  background: var(--color-bg-darker);
+  border-radius: 20px;
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  animation: fadeInUp .6s ease;
+}
+
+@media (max-width: 768px) {
+  .product-detail-card {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
+.product-detail-image-container {
+  position: relative;
+  aspect-ratio: 3/2;
+  overflow: hidden;
+  border-radius: 15px;
+}
+
+.product-detail-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--transition-slow);
+}
+
+.product-detail-card:hover .product-detail-image {
+  transform: scale(1.05);
+}
+
+.product-detail-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.product-detail-name {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: var(--color-primary);
+  line-height: 1.2;
+}
+
+.product-detail-price {
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.product-detail-description {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: var(--color-text);
+  margin-bottom: 1.5rem;
+  white-space: pre-wrap;
+}
+
+.product-detail-meta {
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+  color: var(--color-text-muted);
+  font-size: .9rem;
+  margin-top: auto;
+}
+
+.product-detail-meta small {
+  display: block;
+}
+
+/* Loading fullscreen specific to product detail */
+.loading-fullscreen {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.loading-fullscreen .loading {
+  width: 60px;
+  height: 60px;
+  border-width: 5px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .product-detail-name {
+    font-size: 2rem;
+  }
+  
+  .product-detail-price {
+    font-size: 1.8rem;
+  }
+  
+  .product-actions {
+    width: 100%;
+    display: flex !important;
+    gap: .5rem;
+    margin-top: 1rem;
+  }
+  
+  .product-actions .btn {
+    flex: 1;
+    padding: .75rem;
+    font-size: 1rem;
+  }
+}

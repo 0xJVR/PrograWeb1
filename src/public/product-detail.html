@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detalle del Producto - Portal de Productos</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/product-detail.css">
+</head>
+<body>
+  <div class="animated-bg"></div>
+
+  <!-- Header -->
+  <header>
+    <nav>
+      <div class="logo">Portal Productos</div>
+      <div class="nav-links" id="navLinks">
+        <a href="/">Productos</a>
+        <a href="/chat.html" id="chatLink" style="display: none;">Chat</a>
+        <a href="/login.html" id="loginLink">Iniciar Sesión</a>
+        <a href="/register.html" id="registerLink">Registrarse</a>
+        <div class="user-info compact" id="userInfo" style="display: none;" tabindex="0" aria-expanded="false">
+          <div class="user-avatar" id="userAvatar"></div>
+          <div>
+            <div id="userName"></div>
+            <span class="role-badge" id="userRole"></span>
+          </div>
+          <a href="/settings.html" class="btn btn-secondary">⚙️</a>
+          <button class="btn btn-secondary" id="logoutBtn" style="display: none;">Cerrar Sesión</button>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Contenido Principal -->
+  <main class="container">
+    <!-- Indicador de carga -->
+    <div id="loadingIndicator" class="loading-fullscreen" style="display: none;">
+      <div class="loading"></div>
+    </div>
+
+    <!-- Contenido del producto -->
+    <div id="productContent" style="display: none;">
+      <div class="product-detail-header">
+        <button class="btn btn-secondary" id="backButton">
+          ← Volver a Productos
+        </button>
+        <div class="product-actions" id="productActions" style="display: none;">
+          <button class="btn btn-secondary" id="editProductBtn">
+            Editar
+          </button>
+          <button class="btn btn-danger" id="deleteProductBtn">
+            Eliminar
+          </button>
+        </div>
+      </div>
+
+      <div class="product-detail-card">
+        <div class="product-detail-image-container">
+          <img 
+            id="productImage" 
+            src="" 
+            alt="" 
+            class="product-detail-image"
+          >
+        </div>
+        
+        <div class="product-detail-info">
+          <h1 id="productName" class="product-detail-name"></h1>
+          <p id="productPrice" class="product-detail-price"></p>
+          <p id="productDescription" class="product-detail-description"></p>
+          
+          <div class="product-detail-meta">
+            <small id="productCreatedAt"></small>
+            <small id="productUpdatedAt" style="display: none;"></small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error message -->
+    <div id="errorMessage" class="alert alert-error" style="display: none;"></div>
+  </main>
+
+  <!-- Modal para editar producto (reutilizamos el mismo modal del index.html) -->
+  <div class="modal" id="productModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">Editar Producto</h3>
+        <button class="close-modal" id="closeModal">&times;</button>
+      </div>
+      
+      <div id="modalAlert"></div>
+      
+      <form id="productForm">
+        <input type="hidden" id="productId">
+        
+        <div class="form-group">
+          <label for="productName">Nombre del Producto</label>
+          <input type="text" id="modalProductName" required>
+        </div>
+
+        <div class="form-group">
+          <label for="productPrice">Precio ($)</label>
+          <input type="number" id="modalProductPrice" step="0.01" min="0" required>
+        </div>
+
+        <div class="form-group">
+          <label for="productDescription">Descripción</label>
+          <textarea id="modalProductDescription" required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="productImage">URL de la Imagen</label>
+          <input type="url" id="modalProductImage" placeholder="https://ejemplo.com/imagen.jpg">
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">
+            Guardar
+          </button>
+          <button type="button" class="btn btn-secondary" id="cancelBtn" style="flex: 1;">
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>&copy; Portal de Productos - Programación Web I</p>
+    <p>Javier Salmerón</p>
+  </footer>
+
+  <script src="/product-detail.js"></script>
+</body>
+</html>

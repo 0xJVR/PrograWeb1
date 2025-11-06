@@ -203,18 +203,19 @@ function renderProducts(productsToRender) {
         src="${product.image || 'https://via.placeholder.com/400x300?text=Producto'}" 
         alt="${product.name}" 
         class="product-image"
-        onerror="this.src='https://via.placeholder.com/400x300?text=Imagen+No+Disponible'"
+        onclick="viewProductDetail('${product._id}')"
+        style="cursor: pointer;"
       >
       <div class="product-info">
-        <h3 class="product-name">${product.name}</h3>
+        <h3 class="product-name" onclick="viewProductDetail('${product._id}')">${product.name}</h3>
         <p class="product-price">$${parseFloat(product.price).toFixed(2)}</p>
         <p class="product-description">${product.description}</p>
         ${currentUser && currentUser.role === 'admin' ? `
           <div class="product-actions">
-            <button class="btn btn-secondary" onclick="editProduct('${product._id}')">
+            <button class="btn btn-secondary" onclick="editProduct('${product._id}'); event.stopPropagation();">
               Editar
             </button>
-            <button class="btn btn-danger" onclick="deleteProduct('${product._id}')">
+            <button class="btn btn-danger" onclick="deleteProduct('${product._id}'); event.stopPropagation();">
               Eliminar
             </button>
           </div>
@@ -222,6 +223,11 @@ function renderProducts(productsToRender) {
       </div>
     </div>
   `).join('');
+}
+
+// Ver producto en detalle
+function viewProductDetail(productId) {
+  window.location.href = `/product-detail.html?id=${productId}`;
 }
 
 // Abrir modal de producto
