@@ -2,13 +2,18 @@
 const mongoose = require('mongoose');
 
 const messageSchema = new mongoose.Schema({
-  user: {
+  sender: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
-  userName: {
+  senderName: {
     type: String,
+    required: true
+  },
+  recipient: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
     required: true
   },
   content: {
@@ -20,10 +25,23 @@ const messageSchema = new mongoose.Schema({
   timestamp: {
     type: Date,
     default: Date.now
+  },
+  conversationType: {
+    type: String,
+    enum: ['direct', 'admin_broadcast'],
+    required: true,
+    default: 'direct'
+  },
+  conversationId: {
+    type: String,
+    required: true
   }
 });
 
-// Índice para búsquedas rápidas por fecha
+// Índices para búsquedas rápidas
 messageSchema.index({ timestamp: -1 });
+messageSchema.index({ conversationId: 1, timestamp: -1 });
+messageSchema.index({ sender: 1, recipient: 1 });
+messageSchema.index({ conversationType: 1 });
 
 module.exports = mongoose.model('Message', messageSchema);

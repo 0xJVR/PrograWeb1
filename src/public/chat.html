@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chat en Tiempo Real - Portal de Productos</title>
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/chat.css">
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/chat.css" />
 </head>
 <body>
   <div class="animated-bg"></div>
@@ -16,14 +16,14 @@
       <div class="logo">Portal Productos</div>
       <div class="nav-links" id="navLinks">
         <a href="/">Productos</a>
-        <a href="/chat.html">Chat</a>
+        <a href="/chat.html" aria-current="page">Chat</a>
         <div class="user-info" id="userInfo" style="display: none;">
-          <div class="user-avatar" id="userAvatar"></div>
+          <div class="user-avatar" id="userAvatar" aria-hidden="true"></div>
           <div>
             <div id="userName"></div>
             <span class="role-badge" id="userRole"></span>
           </div>
-          <button class="btn btn-secondary" id="logoutBtn">Cerrar Sesión</button>
+          <button class="btn btn-secondary" id="logoutBtn" type="button">Cerrar Sesión</button>
         </div>
       </div>
     </nav>
@@ -32,261 +32,87 @@
   <!-- Contenedor de Chat -->
   <div class="container">
     <div class="chat-container">
-      <div class="chat-header">
-        <div class="chat-status" id="chatStatus"></div>
-        <div>
-          <h3 style="margin: 0; font-size: 1.2rem;">Chat en Tiempo Real</h3>
-          <p style="margin: 0; font-size: 0.85rem; color: var(--color-text-muted);" id="onlineUsers">
-            Conectando...
-          </p>
+      <!-- Sidebar de conversaciones (solo para admin) -->
+      <aside class="chat-sidebar" id="chatSidebar" style="display: none;">
+        <div class="sidebar-header">
+          <h3>Conversaciones</h3>
+          <button class="btn btn-primary" id="newConversationBtn" style="display: none;" type="button">+ Nueva</button>
+        </div>
+        <div class="conversations-list" id="conversationsList" role="list">
+          <!-- Las conversaciones se cargarán aquí -->
+        </div>
+      </aside>
+
+      <!-- Área principal de chat -->
+      <main class="chat-main" id="chatMain">
+        <div class="chat-header" id="chatHeader">
+          <div class="chat-status" id="chatStatus" aria-label="Estado de conexión" role="status"></div>
+          <div>
+            <h3 style="margin: 0; font-size: 1.2rem;" id="chatTitle">Selecciona una conversación</h3>
+            <p style="margin: 0; font-size: 0.85rem; color: var(--color-text-muted);" id="onlineUsers">
+              Conectando...
+            </p>
+          </div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages" style="display: none;" role="log" aria-live="polite" aria-relevant="additions">
+          <!-- Los mensajes se cargarán aquí -->
+        </div>
+
+        <div id="noConversationSelected" style="text-align: center; padding: 2rem; color: var(--color-text-muted);">
+          <p>Selecciona una conversación para comenzar a chatear</p>
+        </div>
+
+        <div id="typingIndicator" class="typing-indicator" style="display: none; margin: 0 1.5rem 1rem;" aria-live="polite">
+          <span id="typingUser"></span> está escribiendo...
+        </div>
+
+        <div class="chat-input-container" id="chatInputContainer" style="display: none;">
+          <input
+            type="text"
+            class="chat-input"
+            id="messageInput"
+            placeholder="Escribe un mensaje..."
+            maxlength="1000"
+            autocomplete="off"
+            aria-label="Escribe un mensaje"
+          />
+          <button class="btn btn-primary" id="sendBtn" type="button">
+            Enviar
+          </button>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal para nueva conversación -->
+  <div class="modal" id="newConversationModal" role="dialog" aria-modal="true" aria-labelledby="newConversationTitle" tabindex="-1">
+    <div class="modal-content" role="document">
+      <div class="modal-header">
+        <h3 id="newConversationTitle">Nueva Conversación</h3>
+        <button class="close-modal" id="closeNewConversationModal" aria-label="Cerrar" type="button">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="recipientSelect">Seleccionar usuario:</label>
+          <select id="recipientSelect" class="form-control" required>
+            <option value="">-- Selecciona un usuario --</option>
+            <!-- Opciones se cargarán dinámicamente -->
+          </select>
         </div>
       </div>
 
-      <div class="chat-messages" id="chatMessages">
-        <!-- Los mensajes se cargarán aquí -->
-      </div>
-
-      <div id="typingIndicator" class="typing-indicator" style="display: none; margin: 0 1.5rem 1rem;">
-        <span id="typingUser"></span> está escribiendo...
-      </div>
-
-      <div class="chat-input-container">
-        <input 
-          type="text" 
-          class="chat-input" 
-          id="messageInput" 
-          placeholder="Escribe un mensaje..." 
-          maxlength="1000"
-        >
-        <button class="btn btn-primary" id="sendBtn">
-          Enviar
-        </button>
+      <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+        <button type="button" class="btn btn-primary" id="startConversationBtn" style="flex: 1;">Iniciar Chat</button>
+        <button type="button" class="btn btn-secondary" id="cancelNewConversationBtn" style="flex: 1;">Cancelar</button>
       </div>
     </div>
   </div>
 
   <!-- Socket.IO Client -->
   <script src="/socket.io/socket.io.js"></script>
-  
-  <script>
-    // Verificar autenticación
-    const token = localStorage.getItem('token');
-    const userData = JSON.parse(localStorage.getItem('user') || '{}');
 
-    if (!token || !userData.id) {
-      alert('Debes iniciar sesión para acceder al chat');
-      window.location.href = '/login.html';
-    }
-
-    // Mostrar información del usuario en el header
-    const userAvatar = document.getElementById('userAvatar');
-    const userName = document.getElementById('userName');
-    const userRole = document.getElementById('userRole');
-    const userInfo = document.getElementById('userInfo');
-
-    userAvatar.textContent = userData.name ? userData.name.charAt(0).toUpperCase() : 'U';
-    userName.textContent = userData.name || 'Usuario';
-    userRole.textContent = userData.role || 'user';
-    userRole.className = `role-badge ${userData.role || 'user'}`;
-    userInfo.style.display = 'flex';
-
-    // Cerrar sesión
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login.html';
-    });
-
-    // Conectar a Socket.IO
-    const socket = io({
-      auth: {
-        token: token
-      }
-    });
-
-    const chatMessages = document.getElementById('chatMessages');
-    const messageInput = document.getElementById('messageInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const chatStatus = document.getElementById('chatStatus');
-    const onlineUsers = document.getElementById('onlineUsers');
-    const typingIndicator = document.getElementById('typingIndicator');
-    const typingUser = document.getElementById('typingUser');
-
-    let typingTimeout;
-    let isTyping = false;
-
-    // Conexión exitosa
-    socket.on('connect', () => {
-      console.log('Conectado al servidor de chat');
-      chatStatus.style.background = 'var(--color-success)';
-      onlineUsers.textContent = 'Conectado';
-      
-      // Cargar historial de mensajes
-      loadChatHistory();
-    });
-
-    // Error de conexión
-    socket.on('connect_error', (error) => {
-      console.error('Error de conexión:', error);
-      chatStatus.style.background = 'var(--color-error)';
-      onlineUsers.textContent = 'Error de conexión';
-      
-      if (error.message.includes('Token')) {
-        alert('Sesión expirada. Por favor, inicia sesión nuevamente');
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = '/login.html';
-      }
-    });
-
-    // Desconexión
-    socket.on('disconnect', () => {
-      console.log('Desconectado del servidor');
-      chatStatus.style.background = 'var(--color-text-muted)';
-      onlineUsers.textContent = 'Desconectado';
-    });
-
-    // Recibir mensajes
-    socket.on('chat message', (data) => {
-      addMessage(data);
-    });
-
-    // Usuario conectado
-    socket.on('user connected', (data) => {
-      addSystemMessage(`${data.userName} se ha unido al chat`);
-    });
-
-    // Usuario desconectado
-    socket.on('user disconnected', (data) => {
-      addSystemMessage(`${data.userName} ha salido del chat`);
-    });
-
-    // Usuario escribiendo
-    socket.on('user typing', (data) => {
-      if (data.isTyping) {
-        typingUser.textContent = data.userName;
-        typingIndicator.style.display = 'block';
-      } else {
-        typingIndicator.style.display = 'none';
-      }
-    });
-
-    // Cargar historial de mensajes
-    async function loadChatHistory() {
-      try {
-        const response = await fetch('/api/chat/messages', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        const data = await response.json();
-
-        if (data.success && data.messages.length > 0) {
-          data.messages.forEach(msg => {
-            addMessage({
-              id: msg._id,
-              userName: msg.userName,
-              content: msg.content,
-              timestamp: msg.timestamp
-            }, false);
-          });
-          scrollToBottom();
-        }
-      } catch (error) {
-        console.error('Error al cargar historial:', error);
-      }
-    }
-
-    // Enviar mensaje
-    function sendMessage() {
-      const content = messageInput.value.trim();
-      
-      if (content) {
-        socket.emit('chat message', { content });
-        messageInput.value = '';
-        socket.emit('user typing', { isTyping: false });
-        isTyping = false;
-      }
-    }
-
-    sendBtn.addEventListener('click', sendMessage);
-
-    messageInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        sendMessage();
-      }
-    });
-
-    // Detectar cuando el usuario está escribiendo
-    messageInput.addEventListener('input', () => {
-      if (!isTyping) {
-        isTyping = true;
-        socket.emit('user typing', { isTyping: true });
-      }
-
-      clearTimeout(typingTimeout);
-      
-      typingTimeout = setTimeout(() => {
-        isTyping = false;
-        socket.emit('user typing', { isTyping: false });
-      }, 1000);
-    });
-
-    // Agregar mensaje al chat
-    function addMessage(data, animate = true) {
-      const messageDiv = document.createElement('div');
-      messageDiv.className = 'message';
-      
-      // Marcar mensajes propios
-      if (data.userName === userData.email.split('@')[0] || data.userName === userData.name) {
-        messageDiv.classList.add('own');
-      }
-
-      const time = new Date(data.timestamp).toLocaleTimeString('es-ES', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-
-      messageDiv.innerHTML = `
-        <div class="message-header">
-          <span class="message-user">${data.userName}</span>
-          <span class="message-time">${time}</span>
-        </div>
-        <div class="message-content">${escapeHtml(data.content)}</div>
-      `;
-
-      chatMessages.appendChild(messageDiv);
-      
-      if (animate) {
-        scrollToBottom();
-      }
-    }
-
-    // Agregar mensaje del sistema
-    function addSystemMessage(text) {
-      const messageDiv = document.createElement('div');
-      messageDiv.style.cssText = 'text-align: center; padding: 0.5rem; color: var(--color-text-muted); font-size: 0.85rem; font-style: italic;';
-      messageDiv.textContent = text;
-      chatMessages.appendChild(messageDiv);
-      scrollToBottom();
-    }
-
-    // Scroll al final
-    function scrollToBottom() {
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    // Escapar HTML para prevenir XSS
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
-
-    // Focus automático en el input
-    messageInput.focus();
-  </script>
+  <script src="/chat.js"></script>
 </body>
 </html>

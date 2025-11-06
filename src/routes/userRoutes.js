@@ -18,6 +18,35 @@ const GRADIENTS = [
 ];
 
 /**
+ * GET /api/users
+ * Obtener lista de usuarios (solo para administradores)
+ */
+router.get('/', authenticateJWT, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Solo administradores pueden ver la lista de usuarios'
+      });
+    }
+
+    const users = await User.find({}, 'name email role createdAt').sort({ createdAt: -1 });
+    
+    res.json({
+      success: true,
+      users
+    });
+  } catch (error) {
+    console.error('Error al obtener usuarios:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener usuarios',
+      error: error.message
+    });
+  }
+});
+
+/**
  * GET /api/users/profile
  * Obtener perfil del usuario actual
  */
