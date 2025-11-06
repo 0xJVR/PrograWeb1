@@ -136,10 +136,32 @@ io.on('connection', (socket) => {
         // Usuario envía mensaje a su administrador asignado
         const assignedAdminId = userAdminAssignments.get(socket.user.id);
         if (!assignedAdminId) {
-          socket.emit('error', { message: 'No hay administrador disponible' });
-          return;
+          // Si no tiene admin asignado, asignar uno ahora
+          const adminSockets = getAdminSockets();
+          if (adminSockets.length === 0) {
+            socket.emit('no admin available');
+            return;
+          }
+          const randomAdmin = adminSockets[Math.floor(Math.random() * adminSockets.length)];
+          userAdminAssignments.set(socket.user.id, randomAdmin.user.id);
+          targetConversationId = generateConversationId(socket.user.id, randomAdmin.user.id);
+          
+          // Notificar al usuario sobre la asignación
+          socket.emit('admin assigned', {
+            adminId: randomAdmin.user.id,
+            adminName: randomAdmin.user.email.split('@')[0],
+            conversationId: targetConversationId
+          });
+          
+          // Notificar al administrador sobre el nuevo usuario
+          randomAdmin.emit('new user assigned', {
+            userId: socket.user.id,
+            userName: socket.user.email.split('@')[0],
+            conversationId: targetConversationId
+          });
+        } else {
+          targetConversationId = generateConversationId(socket.user.id, assignedAdminId);
         }
-        targetConversationId = generateConversationId(socket.user.id, assignedAdminId);
       } else if (socket.user.role === 'admin' && recipientId) {
         // Administrador envía mensaje a un usuario específico
         targetConversationId = generateConversationId(socket.user.id, recipientId);
@@ -147,9 +169,9 @@ io.on('connection', (socket) => {
 
       // Guardar mensaje en la base de datos
       const message = new Message({
-        sender: socket.user.id,
+        sender: new mongoose.Types.ObjectId(socket.user.id),
         senderName: socket.user.email.split('@')[0],
-        recipient: socket.user.role === 'user' ? userAdminAssignments.get(socket.user.id) : recipientId,
+        recipient: socket.user.role === 'user' ? new mongoose.Types.ObjectId(userAdminAssignments.get(socket.user.id)) : new mongoose.Types.ObjectId(recipientId),
         content,
         conversationType: 'direct',
         conversationId: targetConversationId
@@ -170,6 +192,11 @@ io.on('connection', (socket) => {
           timestamp: message.timestamp,
           conversationId: targetConversationId
         });
+        
+        // Si el destinatario es un administrador, actualizar su lista de conversaciones
+        if (recipientSocket.user.role === 'admin') {
+          loadAdminConversations(recipientSocket);
+        }
       }
 
       // También enviar al remitente para confirmación
@@ -237,7 +264,7 @@ io.on('connection', (socket) => {
         conversationId,
         messages: messages.map(msg => ({
           id: msg._id,
-          senderId: msg.sender,
+          senderId: msg.sender.toString(),
           senderName: msg.senderName,
           content: msg.content,
           timestamp: msg.timestamp
@@ -246,6 +273,13 @@ io.on('connection', (socket) => {
     } catch (error) {
       console.error('Error al cargar mensajes:', error);
       socket.emit('error', { message: 'Error al cargar mensajes' });
+    }
+  });
+
+  // Cargar conversaciones (para administradores)
+  socket.on('load conversations', async () => {
+    if (socket.user.role === 'admin') {
+      await loadAdminConversations(socket);
     }
   });
 
@@ -304,18 +338,24 @@ function assignRandomAdmin(userSocket) {
     userName: userSocket.user.email.split('@')[0],
     conversationId: generateConversationId(userSocket.user.id, randomAdmin.user.id)
   });
+  
+  // Actualizar la lista de conversaciones del administrador
+  loadAdminConversations(randomAdmin);
 }
 
 // Función para cargar conversaciones del administrador
 async function loadAdminConversations(adminSocket) {
   try {
+    // Convertir el ID del admin a ObjectId para la consulta
+    const adminObjectId = new mongoose.Types.ObjectId(adminSocket.user.id);
+    
     // Obtener todas las conversaciones únicas donde el admin participa
     const conversations = await Message.aggregate([
       {
         $match: {
           $or: [
-            { sender: adminSocket.user.id },
-            { recipient: adminSocket.user.id }
+            { sender: adminObjectId },
+            { recipient: adminObjectId }
           ]
         }
       },
@@ -325,7 +365,7 @@ async function loadAdminConversations(adminSocket) {
           lastMessage: { $last: '$$ROOT' },
           unreadCount: {
             $sum: {
-              $cond: [{ $eq: ['$recipient', adminSocket.user.id] }, 1, 0]
+              $cond: [{ $eq: ['$recipient', adminObjectId] }, 1, 0]
             }
           }
         }

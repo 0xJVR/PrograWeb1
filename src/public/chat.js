@@ -14,6 +14,7 @@ class ChatManager {
 
     initializeElements() {
         // Chat elements
+        this.chatContainer = document.querySelector('.chat-container');
         this.chatSidebar = document.getElementById('chatSidebar');
         this.chatMain = document.getElementById('chatMain');
         this.chatMessages = document.getElementById('chatMessages');
@@ -101,6 +102,7 @@ class ChatManager {
         this.socket.on('disconnect', () => {
             console.log('Desconectado del servidor de chat');
             this.updateConnectionStatus(false);
+            this.onlineUsers.textContent = 'Desconectado';
         });
 
         this.socket.on('user info', (userInfo) => {
@@ -128,6 +130,12 @@ class ChatManager {
                 this.displayMessage(message);
                 this.scrollToBottom();
             }
+            // If admin receives a new message in a conversation they weren't viewing,
+            // reload conversations to update the list
+            if (this.currentUser && this.currentUser.role === 'admin' && 
+                message.conversationId !== this.currentConversation) {
+                this.socket.emit('load conversations');
+            }
         });
 
         this.socket.on('user typing', (data) => {
@@ -139,6 +147,8 @@ class ChatManager {
         this.socket.on('new user assigned', (data) => {
             // Admin receives notification about new user
             console.log('Nuevo usuario asignado:', data);
+            // Reload conversations to show the new conversation
+            this.socket.emit('load conversations');
         });
 
         this.socket.on('error', (error) => {
@@ -167,7 +177,10 @@ class ChatManager {
         // Show sidebar and new conversation button
         this.chatSidebar.style.display = 'block';
         this.newConversationBtn.style.display = 'block';
-        this.chatMain.classList.add('admin-layout');
+        this.chatContainer.classList.add('admin-layout');
+        
+        // Update online users status for admin
+        this.onlineUsers.textContent = 'Conectado - Listo para chatear';
         
         // Load conversations
         this.socket.emit('load conversations');
@@ -177,10 +190,11 @@ class ChatManager {
         // Hide sidebar for regular users
         this.chatSidebar.style.display = 'none';
         this.newConversationBtn.style.display = 'none';
+        this.chatContainer.classList.remove('admin-layout');
         
         // User waits for admin assignment
         this.updateChatTitle('Esperando asignación de administrador...');
-        this.onlineUsers.textContent = 'Conectando con soporte...';
+        this.onlineUsers.textContent = 'Conectado - Esperando administrador';
     }
 
     showChatInterface() {
@@ -194,6 +208,7 @@ class ChatManager {
         this.chatInputContainer.style.display = 'none';
         this.noConversationSelected.style.display = 'block';
         this.noConversationSelected.innerHTML = '<p>No hay administradores disponibles en este momento. Por favor, intenta más tarde.</p>';
+        this.onlineUsers.textContent = 'Conectado - Sin administradores disponibles';
     }
 
     updateConnectionStatus(connected) {
