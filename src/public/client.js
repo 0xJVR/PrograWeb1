@@ -28,10 +28,12 @@ function escapeHtml(s) {
   return d.innerHTML;
 }
 
-// Inicializar aplicación
-document.addEventListener('DOMContentLoaded', () => {
-  checkAuthentication();
-  loadProducts();
+// Inicializar aplicación (aseguramos auth antes de productos)
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    await checkAuthentication();
+  } catch {}
+  await loadProducts();
   setupEventListeners();
 });
 
@@ -56,6 +58,8 @@ async function checkAuthentication() {
     }
 
     updateUIForAuthenticatedUser();
+    // Si ya hubiéramos cargado productos, re-render para mostrar acciones de admin
+    if (products.length) renderProducts(products);
   } else {
     updateUIForGuestUser();
   }
@@ -151,6 +155,8 @@ function setupEventListeners() {
   const closeModal = document.getElementById('closeModal');
   const cancelBtn = document.getElementById('cancelBtn');
   const productForm = document.getElementById('productForm');
+  const productsGrid = document.getElementById('productsGrid');
+  const productImageInput = document.getElementById('productImage');
 
   if (logoutBtn) {
     logoutBtn.addEventListener('click', logout);
@@ -170,6 +176,48 @@ function setupEventListeners() {
 
   if (productForm) {
     productForm.addEventListener('submit', handleProductSubmit);
+  }
+
+  // Delegación de eventos para acciones de producto (sin inline JS)
+  if (productsGrid) {
+    productsGrid.addEventListener('click', (e) => {
+      const editBtn = e.target.closest('.btn-edit');
+      if (editBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const productId = editBtn.dataset.id;
+        editProduct(productId);
+        return;
+      }
+      const deleteBtn = e.target.closest('.btn-delete');
+      if (deleteBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const productId = deleteBtn.dataset.id;
+        deleteProduct(productId);
+        return;
+      }
+      const cardImg = e.target.closest('[data-view-id]');
+      if (cardImg) {
+        viewProductDetail(cardImg.dataset.viewId);
+      }
+    });
+  }
+
+  // Vista previa de imagen (opcional)
+  if (productImageInput) {
+    productImageInput.addEventListener('change', () => {
+      const file = productImageInput.files && productImageInput.files[0];
+      const previewWrap = document.getElementById('imagePreview');
+      const previewImg = document.getElementById('previewImage');
+      if (!file || !previewWrap || !previewImg) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        previewImg.src = reader.result;
+        previewWrap.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    });
   }
 
   // Cerrar modal al hacer clic fuera
@@ -199,8 +247,8 @@ async function loadProducts() {
   const loadingIndicator = document.getElementById('loadingIndicator');
 
   try {
-    loadingIndicator.style.display = 'block';
-    productsGrid.innerHTML = '';
+    if (loadingIndicator) loadingIndicator.style.display = 'block';
+    if (productsGrid) productsGrid.innerHTML = '';
 
     const response = await fetch(`${API_URL}/products`);
     const data = await response.json();
@@ -215,13 +263,15 @@ async function loadProducts() {
     console.error('Error:', error);
     showError('Error de conexión al cargar productos');
   } finally {
-    loadingIndicator.style.display = 'none';
+    if (loadingIndicator) loadingIndicator.style.display = 'none';
   }
 }
 
-// Renderizar productos (con escape anti-XSS)
+// Renderizar productos (con escape anti-XSS) y SIN inline JS
 function renderProducts(productsToRender) {
   const productsGrid = document.getElementById('productsGrid');
+
+  if (!productsGrid) return;
 
   if (productsToRender.length === 0) {
     productsGrid.innerHTML = `
@@ -239,19 +289,19 @@ function renderProducts(productsToRender) {
         src="${escapeHtml(product.image || 'https://via.placeholder.com/400x300?text=Producto')}" 
         alt="${escapeHtml(product.name)}" 
         class="product-image"
-        onclick="viewProductDetail('${product._id}')"
+        data-view-id="${product._id}"
         style="cursor: pointer;"
       >
       <div class="product-info">
-        <h3 class="product-name" onclick="viewProductDetail('${product._id}')">${escapeHtml(product.name)}</h3>
+        <h3 class="product-name" data-view-id="${product._id}" style="cursor:pointer;">${escapeHtml(product.name)}</h3>
         <p class="product-price">$${parseFloat(product.price).toFixed(2)}</p>
         <p class="product-description">${escapeHtml(product.description)}</p>
         ${currentUser && currentUser.role === 'admin' ? `
           <div class="product-actions">
-            <button class="btn btn-secondary" onclick="editProduct('${product._id}'); event.stopPropagation();">
+            <button class="btn btn-secondary btn-edit" data-id="${product._id}">
               Editar
             </button>
-            <button class="btn btn-danger" onclick="deleteProduct('${product._id}'); event.stopPropagation();">
+            <button class="btn btn-danger btn-delete" data-id="${product._id}">
               Eliminar
             </button>
           </div>
@@ -275,6 +325,7 @@ function openProductModal(product = null) {
   const productPrice = document.getElementById('productPrice');
   const productDescription = document.getElementById('productDescription');
   const productImage = document.getElementById('productImage');
+  const imagePreview = document.getElementById('imagePreview');
 
   if (product) {
     // Modo edición
@@ -286,6 +337,7 @@ function openProductModal(product = null) {
     productPrice.value = product.price;
     productDescription.value = product.description;
     if (productImage) productImage.value = '';
+    if (imagePreview) imagePreview.style.display = 'none';
   } else {
     // Modo creación
     isEditMode = false;
@@ -296,6 +348,7 @@ function openProductModal(product = null) {
     productPrice.value = '';
     productDescription.value = '';
     if (productImage) productImage.value = '';
+    if (imagePreview) imagePreview.style.display = 'none';
   }
 
   modal.classList.add('show');
@@ -306,7 +359,7 @@ function closeProductModal() {
   const modal = document.getElementById('productModal');
   const modalAlert = document.getElementById('modalAlert');
   modal.classList.remove('show');
-  modalAlert.innerHTML = '';
+  if (modalAlert) modalAlert.innerHTML = '';
 }
 
 // Manejar envío del formulario de producto
@@ -314,7 +367,7 @@ async function handleProductSubmit(e) {
   e.preventDefault();
 
   const modalAlert = document.getElementById('modalAlert');
-  modalAlert.innerHTML = '';
+  if (modalAlert) modalAlert.innerHTML = '';
 
   const token = localStorage.getItem('token');
 
@@ -420,6 +473,7 @@ async function deleteProduct(productId) {
 // Mostrar error en modal
 function showModalError(message) {
   const modalAlert = document.getElementById('modalAlert');
+  if (!modalAlert) return;
   modalAlert.innerHTML = `
     <div class="alert alert-error">
       ${escapeHtml(message)}
@@ -430,6 +484,7 @@ function showModalError(message) {
 // Mostrar éxito en modal
 function showModalSuccess(message) {
   const modalAlert = document.getElementById('modalAlert');
+  if (!modalAlert) return;
   modalAlert.innerHTML = `
     <div class="alert alert-success">
       ${escapeHtml(message)}
@@ -440,6 +495,7 @@ function showModalSuccess(message) {
 // Mostrar error general
 function showError(message) {
   const container = document.querySelector('.container');
+  if (!container) return;
   const alert = document.createElement('div');
   alert.className = 'alert alert-error';
   alert.textContent = message;
@@ -453,6 +509,7 @@ function showError(message) {
 // Mostrar éxito general
 function showSuccess(message) {
   const container = document.querySelector('.container');
+  if (!container) return;
   const alert = document.createElement('div');
   alert.className = 'alert alert-success';
   alert.textContent = message;
