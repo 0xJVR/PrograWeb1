@@ -33,9 +33,19 @@ const io = socketIO(server, {
   maxHttpBufferSize: 1e6 // ~1MB por evento
 });
 
+app.get('/favicon.ico', (req, res) => {
+  res.type('image/svg+xml');
+  return res.sendFile(path.join(__dirname, 'public', 'favicon.svg'), (err) => {
+    if (err) res.status(204).end();
+  });
+});
+
 // Middlewares de seguridad y parsing
-app.use(helmet());
-app.use(cors()); // Si quieres, restringe origin con process.env.CORS_ORIGIN
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false
+}));
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(fileUpload({

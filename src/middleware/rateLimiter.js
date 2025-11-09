@@ -58,9 +58,9 @@ class RateLimiter {
 }
 
 // Limitadores para diferentes endpoints
-const generalLimiter = new RateLimiter(15 * 60 * 1000, 100); // 100 requests por 15 minutos
-const authLimiter = new RateLimiter(15 * 60 * 1000, 5); // 5 intentos de login por 15 minutos
-const apiLimiter = new RateLimiter(15 * 60 * 1000, 50); // 50 requests API por 15 minutos
+const generalLimiter = new RateLimiter(5 * 60 * 1000, 300); // 300 requests por 5 minutos
+const authLimiter = new RateLimiter(5 * 60 * 1000, 5); // 5 intentos de login por 5 minutos
+const apiLimiter = new RateLimiter(5 * 60 * 1000, 250); // 250 requests API por 5 minutos
 
 module.exports = {
   generalLimiter,

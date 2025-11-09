@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Iniciar Sesión - Portal de Productos</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -26,7 +27,7 @@
     
     <div id="alertContainer"></div>
     
-    <form id="loginForm">
+    <form id="loginForm" novalidate>
       <div class="form-group">
         <label for="email">Email</label>
         <input type="email" id="email" placeholder="tu@email.com" required>
@@ -50,84 +51,7 @@
       <a href="/register.html" style="color: var(--color-primary);">Regístrate aquí</a>
     </p>
 
-    <div style="margin-top: 2rem; padding: 1rem; background: rgba(0, 255, 136, 0.1); border-radius: 10px; border: 1px solid var(--color-primary);">
-      <p style="font-size: 0.9rem; margin-bottom: 0.5rem;"><strong>Usuarios de prueba:</strong></p>
-      <p style="font-size: 0.85rem; color: var(--color-text-muted); margin: 0.25rem 0;">
-        <strong>Admin:</strong> admin@test.com / admin123
-      </p>
-      <p style="font-size: 0.85rem; color: var(--color-text-muted); margin: 0.25rem 0;">
-        <strong>Usuario:</strong> user@test.com / user123
-      </p>
-    </div>
   </div>
-
-  <script>
-    // Verificar si ya está autenticado
-    const token = localStorage.getItem('token');
-    if (token) {
-      window.location.href = '/';
-    }
-
-    // Manejar envío del formulario
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const btnText = document.getElementById('btnText');
-      const btnLoading = document.getElementById('btnLoading');
-      const alertContainer = document.getElementById('alertContainer');
-      
-      btnText.style.display = 'none';
-      btnLoading.style.display = 'inline';
-      alertContainer.innerHTML = '';
-
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-
-      try {
-        const response = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ email, password })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-          // Guardar token y usuario en localStorage
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('user', JSON.stringify(data.user));
-          
-          alertContainer.innerHTML = `
-            <div class="alert alert-success">
-              ¡Inicio de sesión exitoso! Redirigiendo...
-            </div>
-          `;
-          
-          setTimeout(() => {
-            window.location.href = '/';
-          }, 1000);
-        } else {
-          alertContainer.innerHTML = `
-            <div class="alert alert-error">
-              ${data.message || 'Error al iniciar sesión'}
-            </div>
-          `;
-          btnText.style.display = 'inline';
-          btnLoading.style.display = 'none';
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        alertContainer.innerHTML = `
-          <div class="alert alert-error">
-            Error de conexión. Por favor, intenta de nuevo.
-          </div>
-        `;
-        btnText.style.display = 'inline';
-        btnLoading.style.display = 'none';
-      }
-    });
-  </script>
+  <script src="/login.js"></script>
 </body>
 </html>

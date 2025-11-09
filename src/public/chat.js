@@ -225,7 +225,7 @@ class ChatManager {
         
         // Usuario espera asignación
         this.updateChatTitle('Esperando asignación de administrador...');
-        this.onlineUsers.textContent = 'Conectado - Esperando administrador';
+        this.onlineUsers.textContent = 'Conectado';
     }
 
     showChatInterface() {

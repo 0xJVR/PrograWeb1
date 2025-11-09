@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Registrarse - Portal de Productos</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -26,7 +27,7 @@
     
     <div id="alertContainer"></div>
     
-    <form id="registerForm">
+    <form id="registerForm" novalidate>
       <div class="form-group">
         <label for="name">Nombre Completo</label>
         <input type="text" id="name" placeholder="Juan Pérez" required>
@@ -47,8 +48,6 @@
         <input type="password" id="confirmPassword" placeholder="Repite tu contraseña" required>
       </div>
 
-      <!-- Eliminado selector de rol para evitar auto-escalado a admin -->
-
       <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
         <span id="btnText">Registrarse</span>
         <span id="btnLoading" style="display: none;">
@@ -62,87 +61,6 @@
       <a href="/login.html" style="color: var(--color-primary);">Inicia sesión aquí</a>
     </p>
   </div>
-
-  <script>
-    // Verificar si ya está autenticado
-    const token = localStorage.getItem('token');
-    if (token) {
-      window.location.href = '/';
-    }
-
-    // Manejar envío del formulario
-    document.getElementById('registerForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const btnText = document.getElementById('btnText');
-      const btnLoading = document.getElementById('btnLoading');
-      const alertContainer = document.getElementById('alertContainer');
-      
-      alertContainer.innerHTML = '';
-
-      const name = document.getElementById('name').value;
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      const confirmPassword = document.getElementById('confirmPassword').value;
-
-      // Validar contraseñas
-      if (password !== confirmPassword) {
-        alertContainer.innerHTML = `
-          <div class="alert alert-error">
-            Las contraseñas no coinciden
-          </div>
-        `;
-        return;
-      }
-
-      btnText.style.display = 'none';
-      btnLoading.style.display = 'inline';
-
-      try {
-        const response = await fetch('/api/auth/register', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ name, email, password })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-          // Guardar token y usuario en localStorage
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('user', JSON.stringify(data.user));
-          
-          alertContainer.innerHTML = `
-            <div class="alert alert-success">
-              ¡Registro exitoso! Redirigiendo...
-            </div>
-          `;
-          
-          setTimeout(() => {
-            window.location.href = '/';
-          }, 1000);
-        } else {
-          alertContainer.innerHTML = `
-            <div class="alert alert-error">
-              ${data.message || 'Error al registrarse'}
-            </div>
-          `;
-          btnText.style.display = 'inline';
-          btnLoading.style.display = 'none';
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        alertContainer.innerHTML = `
-          <div class="alert alert-error">
-            Error de conexión. Por favor, intenta de nuevo.
-          </div>
-        `;
-        btnText.style.display = 'inline';
-        btnLoading.style.display = 'none';
-      }
-    });
-  </script>
+  <script src="/register.js"></script>
 </body>
 </html>
