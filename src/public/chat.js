@@ -106,6 +106,23 @@ class ChatManager {
     }
 
     setupSocketListeners() {
+        // Historial de mensajes (enganchado tras crear el socket)
+        this.socket.on('messages loaded', ({ conversationId, messages }) => {
+            if (conversationId !== this.currentConversation) return;
+            this.chatMessages.innerHTML = '';
+            messages.forEach(m => {
+                this.displayMessage({
+                    senderId: m.senderId || (m.sender && (m.sender._id || m.sender.id)) || m.senderId,
+                    senderName: m.senderName || (m.sender && (m.sender.name || (m.sender.email && m.sender.email.split('@')[0]))),
+                    content: m.content,
+                    timestamp: m.timestamp || m.createdAt || Date.now(),
+                    conversationId
+                });
+            });
+            this.showChatInterface();
+            this.scrollToBottom();
+        });
+
         this.socket.on('connect', () => {
             console.log('Conectado al servidor de chat');
             this.updateConnectionStatus(true);
@@ -142,8 +159,7 @@ class ChatManager {
                 this.displayMessage(message);
                 this.scrollToBottom();
             }
-            // If admin receives a new message in a conversation they weren't viewing,
-            // reload conversations to update the list
+            // Si el admin recibe mensaje de otra conversación, refrescar lista
             if (this.currentUser && this.currentUser.role === 'admin' && 
                 message.conversationId !== this.currentConversation) {
                 this.socket.emit('load conversations');
@@ -157,9 +173,9 @@ class ChatManager {
         });
 
         this.socket.on('new user assigned', (data) => {
-            // Admin receives notification about new user
+            // Admin recibe notificación de nuevo usuario
             console.log('Nuevo usuario asignado:', data);
-            // Reload conversations to show the new conversation
+            // Reload conversations para mostrar la nueva
             this.socket.emit('load conversations');
         });
 
@@ -189,25 +205,25 @@ class ChatManager {
     }
 
     setupAdminInterface() {
-        // Show sidebar and new conversation button
+        // Show sidebar y botón
         this.chatSidebar.style.display = 'block';
         this.newConversationBtn.style.display = 'block';
         this.chatContainer.classList.add('admin-layout');
         
-        // Update online users status for admin
+        // Estado
         this.onlineUsers.textContent = 'Conectado - Listo para chatear';
         
-        // Load conversations
+        // Cargar conversaciones
         this.socket.emit('load conversations');
     }
 
     setupUserInterface() {
-        // Hide sidebar for regular users
+        // Ocultar sidebar para usuarios
         this.chatSidebar.style.display = 'none';
         this.newConversationBtn.style.display = 'none';
         this.chatContainer.classList.remove('admin-layout');
         
-        // User waits for admin assignment
+        // Usuario espera asignación
         this.updateChatTitle('Esperando asignación de administrador...');
         this.onlineUsers.textContent = 'Conectado - Esperando administrador';
     }
@@ -244,7 +260,7 @@ class ChatManager {
             conversationId: this.currentConversation
         };
 
-        // If admin is sending to a specific user, include recipientId
+        // Si el admin envía a un usuario concreto, incluimos recipientId
         if (this.currentUser.role === 'admin' && this.currentConversation) {
             const participants = this.currentConversation.split('_');
             const recipientId = participants.find(id => id !== this.currentUser.id);
@@ -304,7 +320,7 @@ class ChatManager {
 
         messageElement.innerHTML = `
             <div class="message-header">
-                <span class="message-user">${message.senderName}</span>
+                <span class="message-user">${this.escapeHtml(message.senderName)}</span>
                 <span class="message-time">${time}</span>
             </div>
             <div class="message-content">${this.escapeHtml(message.content)}</div>
@@ -344,9 +360,9 @@ class ChatManager {
             });
 
             conversationElement.innerHTML = `
-                <div class="conversation-avatar">${conversation.userName.charAt(0).toUpperCase()}</div>
+                <div class="conversation-avatar">${this.escapeHtml(conversation.userName.charAt(0).toUpperCase())}</div>
                 <div class="conversation-info">
-                    <div class="conversation-name">${conversation.userName}</div>
+                    <div class="conversation-name">${this.escapeHtml(conversation.userName)}</div>
                     <div class="conversation-preview">${this.escapeHtml(conversation.lastMessage)}</div>
                 </div>
                 <div class="conversation-time">${time}</div>

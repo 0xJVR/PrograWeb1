@@ -5,6 +5,7 @@ const Product = require('../models/Product');
 const { authenticateJWT, requireAdmin } = require('../middleware/authenticateJWT');
 const path = require('path');
 const fs = require('fs');
+const { validateProduct, sanitizeString } = require('../utils/validators');
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, '../public/uploads');
@@ -110,24 +111,29 @@ router.get('/:id', async (req, res) => {
 /**
  * POST /api/products
  * Crear nuevo producto (solo admin)
+ * - Sanitiza name/description para evitar XSS
+ * - Valida datos de producto
  */
 router.post('/', authenticateJWT, requireAdmin, handleFileUpload, async (req, res) => {
   try {
-    const { name, price, description, image } = req.body;
+    let { name, price, description, image } = req.body;
 
-    // Validar campos requeridos
-    if (!name || !price || !description) {
+    // Normalizar y validar
+    price = Number(price);
+    const validation = validateProduct({ name, price, description, image });
+    if (!validation.valid) {
       return res.status(400).json({
         success: false,
-        message: 'Nombre, precio y descripción son requeridos'
+        message: 'Datos de producto inválidos',
+        errors: validation.errors
       });
     }
 
     const product = new Product({
-      name,
+      name: sanitizeString(name),
       price,
-      description,
-      image: image,
+      description: sanitizeString(description),
+      image,
       createdBy: req.user.id
     });
 
@@ -151,10 +157,11 @@ router.post('/', authenticateJWT, requireAdmin, handleFileUpload, async (req, re
 /**
  * PUT /api/products/:id
  * Actualizar producto (solo admin)
+ * - Sanitiza entradas y valida si corresponde
  */
 router.put('/:id', authenticateJWT, requireAdmin, async (req, res) => {
   try {
-    const { name, price, description, image } = req.body;
+    let { name, price, description, image } = req.body;
 
     const product = await Product.findById(req.params.id);
     if (!product) {
@@ -164,11 +171,21 @@ router.put('/:id', authenticateJWT, requireAdmin, async (req, res) => {
       });
     }
 
-    // Actualizar campos
-    if (name !== undefined) product.name = name;
-    if (price !== undefined) product.price = price;
-    if (description !== undefined) product.description = description;
-    if (image !== undefined) product.image = image; // Solo actualizar si se proporciona
+    // Validaciones simples si vienen campos
+    if (price !== undefined) {
+      const n = Number(price);
+      if (isNaN(n) || n < 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'El precio debe ser un número válido mayor o igual a 0'
+        });
+      }
+      product.price = n;
+    }
+
+    if (name !== undefined) product.name = sanitizeString(name);
+    if (description !== undefined) product.description = sanitizeString(description);
+    if (image !== undefined) product.image = image;
 
     await product.save();
 

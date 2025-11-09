@@ -47,16 +47,7 @@
         <input type="password" id="confirmPassword" placeholder="Repite tu contraseña" required>
       </div>
 
-      <div class="form-group">
-        <label for="role">Tipo de Usuario</label>
-        <select id="role" style="width: 100%; padding: 0.75rem; background: var(--color-bg-lighter); border: 1px solid var(--color-border); border-radius: 8px; color: var(--color-text); font-size: 1rem;">
-          <option value="user">Usuario Estándar</option>
-          <option value="admin">Administrador</option>
-        </select>
-        <small style="color: var(--color-text-muted); display: block; margin-top: 0.5rem;">
-          Los administradores pueden gestionar productos
-        </small>
-      </div>
+      <!-- Eliminado selector de rol para evitar auto-escalado a admin -->
 
       <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
         <span id="btnText">Registrarse</span>
@@ -93,7 +84,6 @@
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
       const confirmPassword = document.getElementById('confirmPassword').value;
-      const role = document.getElementById('role').value;
 
       // Validar contraseñas
       if (password !== confirmPassword) {
@@ -114,7 +104,7 @@
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ name, email, password, role })
+          body: JSON.stringify({ name, email, password })
         });
 
         const data = await response.json();

@@ -1,6 +1,7 @@
 // Rutas del chat (endpoints HTTP para historial)
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Message = require('../models/Message');
 const User = require('../models/User');
 const { authenticateJWT } = require('../middleware/authenticateJWT');
@@ -13,14 +14,14 @@ router.get('/conversations', authenticateJWT, async (req, res) => {
   try {
     const userId = req.user.id;
     const userRole = req.user.role;
+    const userObjectId = new mongoose.Types.ObjectId(userId);
     
     if (userRole === 'user') {
-      // Usuarios ven una conversación con administradores
-      // Buscar cualquier mensaje que haya enviado o recibido
+      // Usuarios ven su conversación más reciente (si existe)
       const userMessages = await Message.find({ 
         $or: [
-          { sender: userId },
-          { recipient: userId }
+          { sender: userObjectId },
+          { recipient: userObjectId }
         ],
         conversationType: 'direct'
       }).sort({ timestamp: -1 });
@@ -46,7 +47,8 @@ router.get('/conversations', authenticateJWT, async (req, res) => {
             if (otherParticipant) {
               conversations.push({
                 conversationId: convId,
-                lastMessage: lastMessage,
+                lastMessage: lastMessage.content,
+                lastMessageTime: lastMessage.timestamp,
                 participants: [{
                   id: otherParticipant._id,
                   name: otherParticipant.name || otherParticipant.email.split('@')[0],
@@ -59,7 +61,7 @@ router.get('/conversations', authenticateJWT, async (req, res) => {
         }
         
         // Ordenar por timestamp del último mensaje
-        conversations.sort((a, b) => new Date(b.lastMessage.timestamp) - new Date(a.lastMessage.timestamp));
+        conversations.sort((a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime));
         
         // Limitar a una sola conversación para usuarios (la más reciente)
         if (conversations.length > 0) {
@@ -78,8 +80,8 @@ router.get('/conversations', authenticateJWT, async (req, res) => {
       {
         $match: {
           $or: [
-            { sender: userId },
-            { recipient: userId }
+            { sender: userObjectId },
+            { recipient: userObjectId }
           ],
           conversationType: 'direct'
         }
@@ -90,11 +92,11 @@ router.get('/conversations', authenticateJWT, async (req, res) => {
           lastMessage: { $last: '$$ROOT' },
           participantIds: {
             $addToSet: {
-              $cond: {
-                if: { $eq: ['$sender', userId] },
-                then: '$recipient',
-                else: '$sender'
-              }
+              $cond: [
+                { $eq: ['$sender', userObjectId] },
+                '$recipient',
+                '$sender'
+              ]
             }
           }
         }
@@ -110,7 +112,8 @@ router.get('/conversations', authenticateJWT, async (req, res) => {
       {
         $project: {
           conversationId: '$_id',
-          lastMessage: 1,
+          lastMessage: '$lastMessage.content',
+          lastMessageTime: '$lastMessage.timestamp',
           participants: {
             $map: {
               input: '$participants',
@@ -126,70 +129,13 @@ router.get('/conversations', authenticateJWT, async (req, res) => {
         }
       },
       {
-        $sort: { 'lastMessage.timestamp': -1 }
-      }
-    ]);
-
-    // También incluir conversaciones donde el admin es destinatario pero no remitente
-    const allConversations = await Message.aggregate([
-      {
-        $match: {
-          $or: [
-            { sender: userId },
-            { recipient: userId }
-          ],
-          conversationType: 'direct'
-        }
-      },
-      {
-        $group: {
-          _id: '$conversationId',
-          lastMessage: { $last: '$$ROOT' },
-          participantIds: {
-            $addToSet: {
-              $cond: {
-                if: { $eq: ['$sender', userId] },
-                then: '$recipient',
-                else: '$sender'
-              }
-            }
-          }
-        }
-      },
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'participantIds',
-          foreignField: '_id',
-          as: 'participants'
-        }
-      },
-      {
-        $project: {
-          conversationId: '$_id',
-          lastMessage: 1,
-          participants: {
-            $map: {
-              input: '$participants',
-              as: 'participant',
-              in: {
-                id: '$$participant._id',
-                name: '$$participant.name',
-                email: '$$participant.email',
-                role: '$$participant.role'
-              }
-            }
-          }
-        }
-      },
-      {
-        $sort: { 'lastMessage.timestamp': -1 }
+        $sort: { lastMessageTime: -1 }
       }
     ]);
 
     res.json({
       success: true,
-      conversations: allConversations
+      conversations: adminConversations
     });
   } catch (error) {
     console.error('Error al obtener conversaciones:', error);
@@ -209,12 +155,13 @@ router.get('/messages/:conversationId', authenticateJWT, async (req, res) => {
   try {
     const { conversationId } = req.params;
     const userId = req.user.id;
+    const userObjectId = new mongoose.Types.ObjectId(userId);
     const limit = parseInt(req.query.limit) || 50;
 
     // Verificar que el usuario tiene acceso a esta conversación
     const sampleMessage = await Message.findOne({ 
       conversationId,
-      $or: [{ sender: userId }, { recipient: userId }]
+      $or: [{ sender: userObjectId }, { recipient: userObjectId }]
     });
 
     if (!sampleMessage) {
@@ -275,9 +222,6 @@ router.post('/start-conversation', authenticateJWT, async (req, res) => {
     }
 
     // Administradores pueden chatear con cualquier usuario o admin
-    if (senderRole === 'admin') {
-      // Permitir conversaciones con usuarios o admins
-    }
 
     // Generar ID de conversación único (ordenado por IDs de usuarios)
     const sortedIds = [senderId, recipientId].sort();

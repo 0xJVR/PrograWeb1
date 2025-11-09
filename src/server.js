@@ -7,6 +7,7 @@ const cors = require('cors');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const fileUpload = require('express-fileupload');
+const helmet = require('helmet');
 
 const config = require('./config');
 const authRoutes = require('./routes/authRoutes');
@@ -16,21 +17,25 @@ const userRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const Message = require('./models/Message');
 const User = require('./models/User');
+const { generalLimiter, authLimiter, apiLimiter } = require('./middleware/rateLimiter');
+const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 // Inicializar Express
 const app = express();
 const server = http.createServer(app);
 
-// Configurar Socket.IO con CORS
+// Configurar Socket.IO con CORS y límites razonables de buffer
 const io = socketIO(server, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"]
-  }
+  },
+  maxHttpBufferSize: 1e6 // ~1MB por evento
 });
 
-// Middlewares
-app.use(cors());
+// Middlewares de seguridad y parsing
+app.use(helmet());
+app.use(cors()); // Si quieres, restringe origin con process.env.CORS_ORIGIN
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(fileUpload({
@@ -39,6 +44,12 @@ app.use(fileUpload({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   abortOnLimit: true
 }));
+
+// Rate limiting
+app.use(generalLimiter.middleware());
+app.use('/api/auth/login', authLimiter.middleware());
+app.use('/api/auth/register', authLimiter.middleware());
+app.use('/api/', apiLimiter.middleware());
 
 // Servir archivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
@@ -64,6 +75,11 @@ mongoose.connect(config.mongodbUri)
   console.error('Error al conectar a MongoDB:', error);
   process.exit(1);
 });
+
+// Validación de secreto JWT en producción
+if (config.nodeEnv !== 'development' && (!process.env.JWT_SECRET || config.jwtSecret === 'clave_secreta_por_defecto')) {
+  throw new Error('Configurar JWT_SECRET en producción');
+}
 
 // Middleware de autenticación para Socket.IO
 io.use((socket, next) => {
@@ -144,6 +160,8 @@ io.on('connection', async (socket) => {
     socket.on('chat message', async (data) => {
       try {
         const { content, recipientId, conversationId } = data;
+        if (!content || !String(content).trim()) return;
+
         let targetConversationId = conversationId;
 
         // Determinar el destinatario y la conversación
@@ -333,6 +351,16 @@ io.on('connection', async (socket) => {
   }
 });
 
+// Purga periódica de "typing" atascados (10s TTL)
+setInterval(() => {
+  const now = Date.now();
+  for (const [userId, info] of typingUsers.entries()) {
+    if (!info?.timestamp || (now - info.timestamp) > 10000) {
+      typingUsers.delete(userId);
+    }
+  }
+}, 10000);
+
 // Función para asignar un administrador aleatorio a un usuario
 function assignRandomAdmin(userSocket) {
   const adminSockets = getAdminSockets();
@@ -361,26 +389,29 @@ function assignRandomAdmin(userSocket) {
   loadAdminConversations(randomAdmin);
 }
 
-// Función para cargar conversaciones del administrador
+// Función para cargar conversaciones del administrador (optimizada sin N+1)
 async function loadAdminConversations(adminSocket) {
   try {
-    // Convertir el ID del admin a ObjectId para la consulta
     const adminObjectId = new mongoose.Types.ObjectId(adminSocket.user.id);
-    
-    // Obtener todas las conversaciones únicas donde el admin participa
+
     const conversations = await Message.aggregate([
       {
         $match: {
-          $or: [
-            { sender: adminObjectId },
-            { recipient: adminObjectId }
-          ]
+          $or: [{ sender: adminObjectId }, { recipient: adminObjectId }],
+          conversationType: 'direct'
         }
       },
+      // Ordenamos descendente para que $first sea el último mensaje
+      { $sort: { timestamp: -1 } },
       {
         $group: {
           _id: '$conversationId',
-          lastMessage: { $last: '$$ROOT' },
+          lastMessage: { $first: '$$ROOT' },
+          participantIds: {
+            $addToSet: {
+              $cond: [{ $eq: ['$sender', adminObjectId] }, '$recipient', '$sender']
+            }
+          },
           unreadCount: {
             $sum: {
               $cond: [{ $eq: ['$recipient', adminObjectId] }, 1, 0]
@@ -389,29 +420,49 @@ async function loadAdminConversations(adminSocket) {
         }
       },
       {
-        $sort: { 'lastMessage.timestamp': -1 }
-      }
+        $lookup: {
+          from: 'users',
+          localField: 'participantIds',
+          foreignField: '_id',
+          as: 'participants'
+        }
+      },
+      {
+        $project: {
+          conversationId: '$_id',
+          lastMessage: '$lastMessage.content',
+          lastMessageTime: '$lastMessage.timestamp',
+          unreadCount: 1,
+          participants: {
+            $map: {
+              input: '$participants',
+              as: 'p',
+              in: {
+                id: '$$p._id',
+                name: '$$p.name',
+                email: '$$p.email',
+                role: '$$p.role'
+              }
+            }
+          }
+        }
+      },
+      { $sort: { lastMessageTime: -1 } }
     ]);
 
-    // Obtener información de los usuarios en cada conversación
-    const conversationsWithUsers = await Promise.all(
-      conversations.map(async (conv) => {
-        const participants = conv._id.split('_');
-        const otherUserId = participants.find(id => id !== adminSocket.user.id);
-        const otherUser = await User.findById(otherUserId);
-        
-        return {
-          conversationId: conv._id,
-          userId: otherUserId,
-          userName: otherUser ? otherUser.email.split('@')[0] : 'Usuario',
-          lastMessage: conv.lastMessage.content,
-          lastMessageTime: conv.lastMessage.timestamp,
-          unreadCount: conv.unreadCount
-        };
-      })
-    );
+    const formatted = conversations.map(c => {
+      const other = c.participants[0];
+      return {
+        conversationId: c.conversationId,
+        userId: other?.id?.toString() || '',
+        userName: other?.name || (other?.email ? other.email.split('@')[0] : 'Usuario'),
+        lastMessage: c.lastMessage,
+        lastMessageTime: c.lastMessageTime,
+        unreadCount: c.unreadCount
+      };
+    });
 
-    adminSocket.emit('conversations loaded', conversationsWithUsers);
+    adminSocket.emit('conversations loaded', formatted);
   } catch (error) {
     console.error('Error al cargar conversaciones:', error);
   }
@@ -423,20 +474,13 @@ function findSocketByUserId(userId) {
   return sockets.find(socket => socket.user && socket.user.id === userId);
 }
 
-// Manejo de errores global
-app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  res.status(500).json({
-    success: false,
-    message: 'Error interno del servidor',
-    error: config.nodeEnv === 'development' ? err.message : undefined
-  });
-});
+// 404 y manejo de errores (usar middlewares dedicados)
+app.use(notFound);
+app.use(errorHandler);
 
 // Iniciar servidor
 server.listen(config.port, () => {
   console.log(`Servidor corriendo en http://localhost:${config.port}`);
-  console.log(`JWT Secret configurado: ${config.jwtSecret.substring(0, 10)}...`);
   console.log(`Modo: ${config.nodeEnv}`);
 });
 

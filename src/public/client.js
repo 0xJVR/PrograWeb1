@@ -21,6 +21,13 @@ const GRADIENTS = [
   'linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%)'
 ];
 
+// Helper anti-XSS para HTML
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = String(s ?? '');
+  return d.innerHTML;
+}
+
 // Inicializar aplicación
 document.addEventListener('DOMContentLoaded', () => {
   checkAuthentication();
@@ -110,7 +117,7 @@ function updateUIForAuthenticatedUser() {
     const welcomeRole = currentUser.role === 'admin' ? 'Administrador' : 'Usuario';
     welcomeMessage.innerHTML = `
       <div class="alert alert-success" style="animation: fadeIn 0.6s ease;">
-        ¡Bienvenido, ${displayName}! (${welcomeRole})
+        ¡Bienvenido, ${escapeHtml(displayName)}! (${welcomeRole})
       </div>
     `;
     welcomeMessage.style.display = 'block';
@@ -212,7 +219,7 @@ async function loadProducts() {
   }
 }
 
-// Renderizar productos
+// Renderizar productos (con escape anti-XSS)
 function renderProducts(productsToRender) {
   const productsGrid = document.getElementById('productsGrid');
 
@@ -229,16 +236,16 @@ function renderProducts(productsToRender) {
   productsGrid.innerHTML = productsToRender.map(product => `
     <div class="product-card">
       <img 
-        src="${product.image || 'https://via.placeholder.com/400x300?text=Producto'}" 
-        alt="${product.name}" 
+        src="${escapeHtml(product.image || 'https://via.placeholder.com/400x300?text=Producto')}" 
+        alt="${escapeHtml(product.name)}" 
         class="product-image"
         onclick="viewProductDetail('${product._id}')"
         style="cursor: pointer;"
       >
       <div class="product-info">
-        <h3 class="product-name" onclick="viewProductDetail('${product._id}')">${product.name}</h3>
+        <h3 class="product-name" onclick="viewProductDetail('${product._id}')">${escapeHtml(product.name)}</h3>
         <p class="product-price">$${parseFloat(product.price).toFixed(2)}</p>
-        <p class="product-description">${product.description}</p>
+        <p class="product-description">${escapeHtml(product.description)}</p>
         ${currentUser && currentUser.role === 'admin' ? `
           <div class="product-actions">
             <button class="btn btn-secondary" onclick="editProduct('${product._id}'); event.stopPropagation();">
@@ -415,7 +422,7 @@ function showModalError(message) {
   const modalAlert = document.getElementById('modalAlert');
   modalAlert.innerHTML = `
     <div class="alert alert-error">
-      ${message}
+      ${escapeHtml(message)}
     </div>
   `;
 }
@@ -425,7 +432,7 @@ function showModalSuccess(message) {
   const modalAlert = document.getElementById('modalAlert');
   modalAlert.innerHTML = `
     <div class="alert alert-success">
-      ${message}
+      ${escapeHtml(message)}
     </div>
   `;
 }

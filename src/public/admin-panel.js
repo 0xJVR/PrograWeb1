@@ -4,6 +4,13 @@ let currentPage = 1;
 let currentUserPage = 1;
 const token = localStorage.getItem('token');
 
+// Helper anti-XSS para HTML
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = String(s ?? '');
+  return d.innerHTML;
+}
+
 // Verificar autenticación
 if (!token) {
   window.location.href = '/login.html';
@@ -80,19 +87,22 @@ function displayRecentUsers(users) {
     return;
   }
 
-  container.innerHTML = users.map(user => `
-    <div class="activity-item">
-      <div class="activity-avatar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-        ${user.name.charAt(0).toUpperCase()}
+  container.innerHTML = users.map(user => {
+    const initial = (user.name && user.name[0]) ? user.name[0].toUpperCase() : ((user.email || 'U')[0]?.toUpperCase() || 'U');
+    return `
+      <div class="activity-item">
+        <div class="activity-avatar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+          ${escapeHtml(initial)}
+        </div>
+        <div class="activity-info">
+          <div class="activity-title">${escapeHtml(user.name || user.email)}</div>
+          <div class="activity-subtitle">${escapeHtml(user.email)}</div>
+          <div class="activity-date">${new Date(user.createdAt).toLocaleDateString()}</div>
+        </div>
+        <span class="role-badge">${user.role === 'admin' ? 'Admin' : 'Usuario'}</span>
       </div>
-      <div class="activity-info">
-        <div class="activity-title">${user.name}</div>
-        <div class="activity-subtitle">${user.email}</div>
-        <div class="activity-date">${new Date(user.createdAt).toLocaleDateString()}</div>
-      </div>
-      <span class="role-badge">${user.role === 'admin' ? 'Admin' : 'Usuario'}</span>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 // Mostrar productos recientes
@@ -108,8 +118,8 @@ function displayRecentProducts(products) {
     <div class="activity-item">
       <div class="activity-avatar">📦</div>
       <div class="activity-info">
-        <div class="activity-title">${product.name}</div>
-        <div class="activity-subtitle">\$${product.price}</div>
+        <div class="activity-title">${escapeHtml(product.name)}</div>
+        <div class="activity-subtitle">\$${Number(product.price).toFixed(2)}</div>
         <div class="activity-date">${new Date(product.createdAt).toLocaleDateString('es-ES')}</div>
       </div>
     </div>
@@ -263,7 +273,7 @@ async function loadUsers(page = 1) {
   }
 }
 
-// Mostrar usuarios en tabla
+// Mostrar usuarios en tabla (sin inline JS, con data-* y listeners)
 function displayUsers(users) {
   const tbody = document.getElementById('usersTableBody');
   
@@ -274,16 +284,28 @@ function displayUsers(users) {
 
   tbody.innerHTML = users.map(user => `
     <tr>
-      <td>${user.name}</td>
-      <td>${user.email}</td>
+      <td>${escapeHtml(user.name || user.email)}</td>
+      <td>${escapeHtml(user.email)}</td>
       <td><span class="role-badge">${user.role === 'admin' ? 'Admin' : 'Usuario'}</span></td>
       <td>${new Date(user.createdAt).toLocaleDateString()}</td>
       <td class="action-buttons">
-        <button class="btn-small btn-edit" onclick="openEditModal('${user._id}', '${user.name}', '${user.role}')">Editar</button>
-        <button class="btn-small btn-delete" onclick="openDeleteModal('${user._id}', '${user.name}')">Eliminar</button>
+        <button class="btn-small btn-edit" data-id="${user._id}" data-name="${escapeHtml(user.name || '')}" data-role="${user.role}">Editar</button>
+        <button class="btn-small btn-delete" data-id="${user._id}" data-name="${escapeHtml(user.name || user.email)}">Eliminar</button>
       </td>
     </tr>
   `).join('');
+
+  // Listeners delegados
+  tbody.querySelectorAll('.btn-edit').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openEditModal(btn.dataset.id, btn.dataset.name, btn.dataset.role);
+    });
+  });
+  tbody.querySelectorAll('.btn-delete').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openDeleteModal(btn.dataset.id, btn.dataset.name);
+    });
+  });
 }
 
 // Cargar productos
@@ -306,7 +328,7 @@ async function loadProducts(page = 1) {
   }
 }
 
-// Mostrar productos en tabla (3 columnas: Producto, Precio, Creado)
+// Mostrar productos en tabla (3 columnas: Producto, Precio, Creado) con escape
 function displayProducts(products) {
   const tbody = document.getElementById('productsTableBody');
   
@@ -323,7 +345,7 @@ function displayProducts(products) {
 
     return `
       <tr>
-        <td>${product.name}</td>
+        <td>${escapeHtml(product.name)}</td>
         <td>${priceStr}</td>
         <td>${createdStr}</td>
       </tr>
@@ -360,10 +382,10 @@ function displayActivityUsers(users) {
 
   container.innerHTML = users.map(user => `
     <div class="activity-item">
-      <div class="activity-avatar">${user.name.charAt(0).toUpperCase()}</div>
+      <div class="activity-avatar">${escapeHtml((user.name || user.email || 'U').charAt(0).toUpperCase())}</div>
       <div class="activity-info">
-        <div class="activity-title">${user.name}</div>
-        <div class="activity-subtitle">${user.email}</div>
+        <div class="activity-title">${escapeHtml(user.name || user.email)}</div>
+        <div class="activity-subtitle">${escapeHtml(user.email)}</div>
       </div>
       <span class="role-badge">${user.role === 'admin' ? 'Admin' : 'Usuario'}</span>
     </div>
@@ -383,8 +405,8 @@ function displayActivityProducts(products) {
     <div class="activity-item">
       <div class="activity-avatar">📦</div>
       <div class="activity-info">
-        <div class="activity-title">${product.name}</div>
-        <div class="activity-subtitle">\$${product.price}</div>
+        <div class="activity-title">${escapeHtml(product.name)}</div>
+        <div class="activity-subtitle">\$${Number(product.price).toFixed(2)}</div>
       </div>
     </div>
   `).join('');
@@ -403,8 +425,8 @@ function displayActivityMessages(messages) {
     <div class="activity-item">
       <div class="activity-avatar">💬</div>
       <div class="activity-info">
-        <div class="activity-title">${message.userName}</div>
-        <div class="activity-subtitle">${message.content.substring(0, 50)}...</div>
+        <div class="activity-title">${escapeHtml(message.userName)}</div>
+        <div class="activity-subtitle">${escapeHtml(message.content.substring(0, 50))}...</div>
       </div>
     </div>
   `).join('');
@@ -422,12 +444,16 @@ function displayPagination(pagination, containerId, callback) {
   let html = '';
   for (let i = 1; i <= pagination.pages; i++) {
     html += `
-      <button class="pagination-btn ${i === pagination.page ? 'active' : ''}" onclick="${callback.name}(${i})">
+      <button class="pagination-btn ${i === pagination.page ? 'active' : ''}" data-page="${i}">
         ${i}
       </button>
     `;
   }
   container.innerHTML = html;
+
+  container.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => callback(Number(btn.dataset.page)));
+  });
 }
 
 // Abrir modal de edición
@@ -512,7 +538,7 @@ function showAlert(containerId, message, type) {
   const container = document.getElementById(containerId);
   if (!container) return;
   
-  container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+  container.innerHTML = `<div class="alert alert-${type}">${escapeHtml(message)}</div>`;
   setTimeout(() => {
     container.innerHTML = '';
   }, 5000);

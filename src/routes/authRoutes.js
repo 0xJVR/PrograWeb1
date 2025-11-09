@@ -12,7 +12,7 @@ const { authenticateJWT } = require('../middleware/authenticateJWT');
  */
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
 
     // Validar campos requeridos
     if (!name || !email || !password) {
@@ -31,12 +31,12 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Crear nuevo usuario
+    // Crear nuevo usuario: role forzado a 'user'
     const user = new User({
       name,
       email,
       password,
-      role: role || 'user'
+      role: 'user'
     });
 
     await user.save();

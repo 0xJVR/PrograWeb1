@@ -22,12 +22,17 @@ class RateLimiter {
         const recentRequests = userRequests.filter(
           timestamp => now - timestamp < this.windowMs
         );
-        this.requests.set(key, recentRequests);
+        // Liberar la clave si ya no hay peticiones recientes (evita fuga de memoria)
+        if (recentRequests.length === 0) {
+          this.requests.delete(key);
+        } else {
+          this.requests.set(key, recentRequests);
+        }
       } else {
         this.requests.set(key, []);
       }
 
-      const userRequests = this.requests.get(key);
+      const userRequests = this.requests.get(key) || [];
 
       // Verificar límite
       if (userRequests.length >= this.maxRequests) {

@@ -180,17 +180,20 @@ function renderProduct(product) {
     minute: '2-digit'
   })}`;
   
-  if (product.updatedAt && product.updatedAt !== product.createdAt) {
+  if (product.updatedAt) {
     const updatedAt = new Date(product.updatedAt);
-    const el = document.getElementById('productUpdatedAt');
-    el.textContent = `Actualizado: ${updatedAt.toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })}`;
-    el.style.display = 'block';
+    const createdTime = new Date(product.createdAt);
+    if ((updatedAt - createdTime) > 1000) { // mostrar solo si difiere > 1s
+      const el = document.getElementById('productUpdatedAt');
+      el.textContent = `Actualizado: ${updatedAt.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })}`;
+      el.style.display = 'block';
+    }
   }
 }
 
