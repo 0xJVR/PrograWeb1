@@ -139,8 +139,7 @@ router.put('/users/:id', authenticateJWT, requireAdmin, async (req, res) => {
 
     if (name) user.name = name;
     if (role && ['user', 'admin'].includes(role)) user.role = role;
-    
-    user.updatedAt = new Date();
+
     await user.save();
 
     res.json({
@@ -251,7 +250,7 @@ router.get('/activity', authenticateJWT, requireAdmin, async (req, res) => {
       .limit(5);
 
     const recentMessages = await Message.find()
-      .select('userName content timestamp')
+      .select('senderName content timestamp')
       .sort({ timestamp: -1 })
       .limit(5);
 

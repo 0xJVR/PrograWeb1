@@ -26,6 +26,12 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'admin'],
     default: 'user'
   },
+  profileColor: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 7
+  },
   createdAt: {
     type: Date,
     default: Date.now

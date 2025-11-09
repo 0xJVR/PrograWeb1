@@ -5,6 +5,18 @@ let currentUser = null;
 let currentProduct = null;
 const API_URL = '/api';
 
+// Gradientes para avatar
+const GRADIENTS = [
+  'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+  'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+  'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+  'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+  'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
+  'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+  'linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%)'
+];
+
 // Inicializar aplicación
 document.addEventListener('DOMContentLoaded', () => {
   checkAuthentication();
@@ -13,12 +25,25 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Verificar autenticación
-function checkAuthentication() {
+async function checkAuthentication() {
   const token = localStorage.getItem('token');
   const userData = localStorage.getItem('user');
 
   if (token && userData) {
     currentUser = JSON.parse(userData);
+
+    // Completar profileColor si falta
+    if (currentUser.profileColor === undefined || currentUser.profileColor === null) {
+      try {
+        const res = await fetch('/api/users/profile', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (res.ok) {
+          const data = await res.json();
+          currentUser.profileColor = data.user.profileColor;
+          localStorage.setItem('user', JSON.stringify(currentUser));
+        }
+      } catch {}
+    }
+
     updateUIForAuthenticatedUser();
   } else {
     updateUIForGuestUser();
@@ -47,7 +72,10 @@ function updateUIForAuthenticatedUser() {
   if (loginLink) loginLink.style.display = 'none';
   if (registerLink) registerLink.style.display = 'none';
   if (userInfo) userInfo.style.display = 'flex';
-  if (userAvatar) userAvatar.textContent = displayName.charAt(0).toUpperCase();
+  if (userAvatar) {
+    userAvatar.textContent = displayName.charAt(0).toUpperCase();
+    userAvatar.style.background = GRADIENTS[currentUser.profileColor ?? 0];
+  }
   if (userName) userName.textContent = displayName;
   if (userRole) {
     userRole.textContent = currentUser.role || 'user';
@@ -135,7 +163,6 @@ async function loadProduct(productId) {
 
 // Renderizar producto
 function renderProduct(product) {
-  // Usar la imagen del producto o el placeholder por defecto del modelo
   const imageUrl = product.image;
   document.getElementById('productImage').src = imageUrl;
   document.getElementById('productImage').alt = product.name;
@@ -143,7 +170,7 @@ function renderProduct(product) {
   document.getElementById('productPrice').textContent = `$${parseFloat(product.price).toFixed(2)}`;
   document.getElementById('productDescription').textContent = product.description;
   
-  // Formatear fechas
+  // Fechas del producto
   const createdAt = new Date(product.createdAt);
   document.getElementById('productCreatedAt').textContent = `Creado: ${createdAt.toLocaleDateString('es-ES', {
     year: 'numeric',
@@ -155,14 +182,15 @@ function renderProduct(product) {
   
   if (product.updatedAt && product.updatedAt !== product.createdAt) {
     const updatedAt = new Date(product.updatedAt);
-    document.getElementById('productUpdatedAt').textContent = `Actualizado: ${updatedAt.toLocaleDateString('es-ES', {
+    const el = document.getElementById('productUpdatedAt');
+    el.textContent = `Actualizado: ${updatedAt.toLocaleDateString('es-ES', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     })}`;
-    document.getElementById('productUpdatedAt').style.display = 'block';
+    el.style.display = 'block';
   }
 }
 
@@ -233,7 +261,7 @@ function openEditProductModal() {
   productName.value = currentProduct.name;
   productPrice.value = currentProduct.price;
   productDescription.value = currentProduct.description;
-  productImage.value = currentProduct.image || '';
+  if (productImage) productImage.value = '';
 
   modal.classList.add('show');
   document.body.classList.add('modal-open');
@@ -256,13 +284,6 @@ async function handleProductUpdate(e) {
   const modalAlert = document.getElementById('modalAlert');
   modalAlert.innerHTML = '';
 
-  const productData = {
-    name: document.getElementById('modalProductName').value,
-    price: parseFloat(document.getElementById('modalProductPrice').value),
-    description: document.getElementById('modalProductDescription').value,
-    image: document.getElementById('modalProductImage').value || undefined
-  };
-
   const token = localStorage.getItem('token');
 
   if (!token) {
@@ -277,7 +298,11 @@ async function handleProductUpdate(e) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify(productData)
+      body: JSON.stringify({
+        name: document.getElementById('modalProductName').value,
+        price: parseFloat(document.getElementById('modalProductPrice').value),
+        description: document.getElementById('modalProductDescription').value
+      })
     });
 
     const data = await response.json();

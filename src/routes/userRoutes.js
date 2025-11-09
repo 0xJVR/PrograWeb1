@@ -30,7 +30,7 @@ router.get('/', authenticateJWT, async (req, res) => {
       });
     }
 
-    const users = await User.find({}, 'name email role createdAt').sort({ createdAt: -1 });
+    const users = await User.find({}, 'name email role profileColor createdAt').sort({ createdAt: -1 });
     
     res.json({
       success: true,
@@ -69,10 +69,7 @@ router.get('/profile', authenticateJWT, async (req, res) => {
         email: user.email,
         role: user.role,
         profileColor: user.profileColor,
-        bio: user.bio,
-        profileImage: user.profileImage,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
+        createdAt: user.createdAt
       }
     });
   } catch (error) {
@@ -87,11 +84,11 @@ router.get('/profile', authenticateJWT, async (req, res) => {
 
 /**
  * PUT /api/users/profile
- * Actualizar información del perfil
+ * Actualizar información del perfil (solo nombre)
  */
 router.put('/profile', authenticateJWT, async (req, res) => {
   try {
-    const { name, bio, profileImage } = req.body;
+    const { name } = req.body;
     
     const user = await User.findById(req.user.id);
     
@@ -102,12 +99,7 @@ router.put('/profile', authenticateJWT, async (req, res) => {
       });
     }
 
-    // Actualizar campos
     if (name) user.name = name;
-    if (bio !== undefined) user.bio = bio;
-    if (profileImage) user.profileImage = profileImage;
-    
-    user.updatedAt = new Date();
     await user.save();
 
     res.json({
@@ -119,10 +111,7 @@ router.put('/profile', authenticateJWT, async (req, res) => {
         email: user.email,
         role: user.role,
         profileColor: user.profileColor,
-        bio: user.bio,
-        profileImage: user.profileImage,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
+        createdAt: user.createdAt
       }
     });
   } catch (error) {
@@ -137,7 +126,7 @@ router.put('/profile', authenticateJWT, async (req, res) => {
 
 /**
  * PUT /api/users/profile-color
- * Cambiar color de perfil
+ * Cambiar color de perfil (gradiente del avatar)
  */
 router.put('/profile-color', authenticateJWT, async (req, res) => {
   try {
@@ -161,7 +150,6 @@ router.put('/profile-color', authenticateJWT, async (req, res) => {
     }
 
     user.profileColor = colorIndex;
-    user.updatedAt = new Date();
     await user.save();
 
     res.json({
@@ -230,7 +218,6 @@ router.post('/change-password', authenticateJWT, async (req, res) => {
 
     // Cambiar contraseña
     user.password = newPassword;
-    user.updatedAt = new Date();
     await user.save();
 
     res.json({

@@ -6,6 +6,18 @@ class ChatManager {
         this.currentConversation = null;
         this.typingTimer = null;
         this.isTyping = false;
+
+        // Gradientes para avatar
+        this.GRADIENTS = [
+            'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+            'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+            'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+            'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+            'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
+            'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+            'linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%)'
+        ];
         
         this.initializeElements();
         this.initializeEventListeners();
@@ -160,9 +172,12 @@ class ChatManager {
         if (this.currentUser) {
             // Show user info
             this.userInfo.style.display = 'flex';
-            this.userName.textContent = this.currentUser.email.split('@')[0];
+            const displayName = this.currentUser.email.split('@')[0];
+            this.userName.textContent = displayName;
             this.userRole.textContent = this.currentUser.role === 'admin' ? 'Administrador' : 'Usuario';
             this.userAvatar.textContent = this.currentUser.email.charAt(0).toUpperCase();
+            const idx = this.currentUser.profileColor ?? 0;
+            this.userAvatar.style.background = this.GRADIENTS[idx];
 
             // Setup admin interface
             if (this.currentUser.role === 'admin') {
@@ -337,15 +352,15 @@ class ChatManager {
                 <div class="conversation-time">${time}</div>
             `;
 
-            conversationElement.addEventListener('click', () => {
-                this.selectConversation(conversation);
+            conversationElement.addEventListener('click', (e) => {
+                this.selectConversation(conversation, e.currentTarget);
             });
 
             this.conversationsList.appendChild(conversationElement);
         });
     }
 
-    selectConversation(conversation) {
+    selectConversation(conversation, element) {
         this.currentConversation = conversation.conversationId;
         this.showChatInterface();
         this.updateChatTitle(`Chat con ${conversation.userName}`);
@@ -355,7 +370,7 @@ class ChatManager {
         document.querySelectorAll('.conversation-item').forEach(item => {
             item.classList.remove('active');
         });
-        event.currentTarget.classList.add('active');
+        if (element) element.classList.add('active');
     }
 
     showNewConversationModal() {
@@ -426,7 +441,6 @@ class ChatManager {
     }
 
     showError(message) {
-        // Simple error display - you might want to use a more sophisticated notification system
         alert(`Error: ${message}`);
     }
 

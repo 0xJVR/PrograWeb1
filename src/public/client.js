@@ -9,6 +9,18 @@ let currentProductId = null;
 // API Base URL
 const API_URL = '/api';
 
+// Gradientes para avatar
+const GRADIENTS = [
+  'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+  'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+  'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+  'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+  'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
+  'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+  'linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%)'
+];
+
 // Inicializar aplicación
 document.addEventListener('DOMContentLoaded', () => {
   checkAuthentication();
@@ -17,12 +29,25 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Verificar autenticación
-function checkAuthentication() {
+async function checkAuthentication() {
   const token = localStorage.getItem('token');
   const userData = localStorage.getItem('user');
 
   if (token && userData) {
     currentUser = JSON.parse(userData);
+
+    // Si no tenemos profileColor, completar desde /api/users/profile
+    if (currentUser.profileColor === undefined || currentUser.profileColor === null) {
+      try {
+        const res = await fetch('/api/users/profile', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (res.ok) {
+          const data = await res.json();
+          currentUser.profileColor = data.user.profileColor;
+          localStorage.setItem('user', JSON.stringify(currentUser));
+        }
+      } catch {}
+    }
+
     updateUIForAuthenticatedUser();
   } else {
     updateUIForGuestUser();
@@ -58,7 +83,11 @@ function updateUIForAuthenticatedUser() {
 
   // Mostrar información del usuario
   if (userInfo) userInfo.style.display = 'flex';
-  if (userAvatar) userAvatar.textContent = displayName.charAt(0).toUpperCase();
+  if (userAvatar) {
+    userAvatar.textContent = displayName.charAt(0).toUpperCase();
+    const idx = currentUser.profileColor ?? 0;
+    userAvatar.style.background = GRADIENTS[idx];
+  }
   if (userName) userName.textContent = displayName;
   if (userRole) {
     userRole.textContent = currentUser.role || 'user';
@@ -249,7 +278,7 @@ function openProductModal(product = null) {
     productName.value = product.name;
     productPrice.value = product.price;
     productDescription.value = product.description;
-    productImage.value = product.image || '';
+    if (productImage) productImage.value = '';
   } else {
     // Modo creación
     isEditMode = false;
@@ -259,7 +288,7 @@ function openProductModal(product = null) {
     productName.value = '';
     productPrice.value = '';
     productDescription.value = '';
-    productImage.value = '';
+    if (productImage) productImage.value = '';
   }
 
   modal.classList.add('show');
@@ -280,13 +309,6 @@ async function handleProductSubmit(e) {
   const modalAlert = document.getElementById('modalAlert');
   modalAlert.innerHTML = '';
 
-  const productData = {
-    name: document.getElementById('productName').value,
-    price: parseFloat(document.getElementById('productPrice').value),
-    description: document.getElementById('productDescription').value,
-    image: document.getElementById('productImage').value || undefined
-  };
-
   const token = localStorage.getItem('token');
 
   if (!token) {
@@ -301,14 +323,32 @@ async function handleProductSubmit(e) {
     
     const method = isEditMode ? 'PUT' : 'POST';
 
-    const response = await fetch(url, {
-      method: method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(productData)
-    });
+    let response;
+    if (method === 'POST') {
+      // Crear con posible imagen (FormData)
+      const formEl = document.getElementById('productForm');
+      const fd = new FormData(formEl);
+      response = await fetch(url, {
+        method,
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: fd
+      });
+    } else {
+      // Editar sin cambio de imagen (JSON simple)
+      const productData = {
+        name: document.getElementById('productName').value,
+        price: parseFloat(document.getElementById('productPrice').value),
+        description: document.getElementById('productDescription').value
+      };
+      response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(productData)
+      });
+    }
 
     const data = await response.json();
 

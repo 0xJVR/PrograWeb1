@@ -44,12 +44,9 @@ async function loadUserProfile() {
     // Rellenar formulario de perfil
     document.getElementById('profileName').value = currentUser.name;
     document.getElementById('profileEmail').value = currentUser.email;
-    document.getElementById('profileBio').value = currentUser.bio || '';
-    document.getElementById('profileImage').value = currentUser.profileImage || '';
     
     // Rellenar información de cuenta
     document.getElementById('createdDate').textContent = new Date(currentUser.createdAt).toLocaleDateString();
-    document.getElementById('updatedDate').textContent = new Date(currentUser.updatedAt).toLocaleDateString();
     document.getElementById('userRoleInfo').textContent = currentUser.role === 'admin' ? 'Administrador' : 'Usuario';
 
     // Mostrar enlace de admin si es necesario
@@ -64,9 +61,6 @@ async function loadUserProfile() {
     selectedColorIndex = currentUser.profileColor || 0;
     updatePreviewAvatar();
     highlightSelectedGradient();
-
-    // Contador de biografía
-    updateBioCounter();
 
   } catch (error) {
     console.error('Error:', error);
@@ -107,7 +101,8 @@ function highlightSelectedGradient() {
 function updatePreviewAvatar() {
   const preview = document.getElementById('previewAvatar');
   preview.style.background = GRADIENTS[selectedColorIndex];
-  preview.textContent = (currentUser.name.charAt(0) + currentUser.name.split(' ')[1]?.charAt(0) || currentUser.name.charAt(0)).toUpperCase();
+  const initials = (currentUser.name?.charAt(0) || currentUser.email?.charAt(0) || 'U').toUpperCase();
+  preview.textContent = initials;
 }
 
 // Actualizar avatar en el header
@@ -116,19 +111,13 @@ function updateUserAvatar() {
   if (userAvatar) {
     const gradient = GRADIENTS[currentUser.profileColor || 0];
     userAvatar.style.background = gradient;
-    userAvatar.textContent = (currentUser.name.charAt(0) + currentUser.name.split(' ')[1]?.charAt(0) || currentUser.name.charAt(0)).toUpperCase();
+    const initials = (currentUser.name?.charAt(0) || currentUser.email?.charAt(0) || 'U').toUpperCase();
+    userAvatar.textContent = initials;
   }
   const userName = document.getElementById('userName');
-  if (userName) userName.textContent = currentUser.name;
+  if (userName) userName.textContent = currentUser.name || currentUser.email.split('@')[0];
   const userRole = document.getElementById('userRole');
   if (userRole) userRole.textContent = currentUser.role === 'admin' ? 'Admin' : 'Usuario';
-}
-
-// Contar caracteres de biografía
-function updateBioCounter() {
-  const bio = document.getElementById('profileBio');
-  const counter = document.getElementById('bioCounter');
-  counter.textContent = `${bio.value.length}/500`;
 }
 
 // Setup de event listeners
@@ -144,11 +133,8 @@ function setupEventListeners() {
     }
   });
 
-  // Formulario de perfil
+  // Formulario de perfil (solo nombre)
   document.getElementById('profileForm').addEventListener('submit', handleProfileUpdate);
-
-  // Contador de biografía
-  document.getElementById('profileBio').addEventListener('input', updateBioCounter);
 
   // Botón guardar color
   document.getElementById('saveColorBtn').addEventListener('click', handleColorUpdate);
@@ -193,14 +179,12 @@ function switchSection(sectionName) {
   document.querySelector(`[data-section="${sectionName}"]`).classList.add('active');
 }
 
-// Actualizar perfil
+// Actualizar perfil (solo nombre)
 async function handleProfileUpdate(e) {
   e.preventDefault();
 
   const data = {
-    name: document.getElementById('profileName').value,
-    bio: document.getElementById('profileBio').value,
-    profileImage: document.getElementById('profileImage').value || null
+    name: document.getElementById('profileName').value
   };
 
   try {
@@ -244,6 +228,8 @@ async function handleColorUpdate() {
 
     currentUser.profileColor = result.profileColor;
     updateUserAvatar();
+    updatePreviewAvatar();
+    highlightSelectedGradient();
     showAlert('appearanceAlert', 'Color actualizado exitosamente', 'success');
   } catch (error) {
     console.error('Error:', error);
@@ -258,11 +244,6 @@ async function handlePasswordChange(e) {
   const currentPassword = document.getElementById('currentPassword').value;
   const newPassword = document.getElementById('newPassword').value;
   const confirmPassword = document.getElementById('confirmPassword').value;
-
-  if (newPassword !== confirmPassword) {
-    showAlert('passwordAlert', 'Las contraseñas no coinciden', 'error');
-    return;
-  }
 
   try {
     const response = await fetch('/api/users/change-password', {

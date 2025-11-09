@@ -110,7 +110,7 @@ function displayRecentProducts(products) {
       <div class="activity-info">
         <div class="activity-title">${product.name}</div>
         <div class="activity-subtitle">\$${product.price}</div>
-        <div class="activity-date">${new Date(product.createdAt).toLocaleDateString()}</div>
+        <div class="activity-date">${new Date(product.createdAt).toLocaleDateString('es-ES')}</div>
       </div>
     </div>
   `).join('');
@@ -306,26 +306,29 @@ async function loadProducts(page = 1) {
   }
 }
 
-// Mostrar productos en tabla
+// Mostrar productos en tabla (3 columnas: Producto, Precio, Creado)
 function displayProducts(products) {
   const tbody = document.getElementById('productsTableBody');
   
   if (!products || products.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">No hay productos</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 2rem;">No hay productos</td></tr>';
     return;
   }
 
-  tbody.innerHTML = products.map(product => `
-    <tr>
-      <td>${product.name}</td>
-      <td>\$${parseFloat(product.price).toFixed(2)}</td>
-      <td>${product.owner ? (product.owner.name || 'N/A') : 'N/A'}</td>
-      <td>${new Date(product.createdAt).toLocaleDateString()}</td>
-      <td class="action-buttons">
-        <button class="btn-small btn-view">Ver</button>
-      </td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = products.map(product => {
+    const created = new Date(product.createdAt);
+    const createdStr = isNaN(created) ? '—' : created.toLocaleDateString('es-ES');
+    const priceNum = Number(product.price);
+    const priceStr = isNaN(priceNum) ? '—' : `$${priceNum.toFixed(2)}`;
+
+    return `
+      <tr>
+        <td>${product.name}</td>
+        <td>${priceStr}</td>
+        <td>${createdStr}</td>
+      </tr>
+    `;
+  }).join('');
 }
 
 // Cargar actividad

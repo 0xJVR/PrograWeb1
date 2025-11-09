@@ -36,7 +36,7 @@ router.post('/register', async (req, res) => {
       name,
       email,
       password,
-      role: role || 'user' // Por defecto 'user', a menos que se especifique 'admin'
+      role: role || 'user'
     });
 
     await user.save();
@@ -56,7 +56,8 @@ router.post('/register', async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        profileColor: user.profileColor
       }
     });
   } catch (error) {
@@ -118,7 +119,8 @@ router.post('/login', async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        profileColor: user.profileColor
       }
     });
   } catch (error) {
@@ -151,7 +153,8 @@ router.get('/verify', authenticateJWT, async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        profileColor: user.profileColor
       }
     });
   } catch (error) {

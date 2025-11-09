@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 const jwt = require('jsonwebtoken');
+const fileUpload = require('express-fileupload');
 
 const config = require('./config');
 const authRoutes = require('./routes/authRoutes');
@@ -32,6 +33,12 @@ const io = socketIO(server, {
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(fileUpload({
+  useTempFiles: true,
+  tempFileDir: '/tmp/',
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  abortOnLimit: true
+}));
 
 // Servir archivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
@@ -100,91 +107,114 @@ const userAdminAssignments = new Map();
 const typingUsers = new Map();
 
 // Eventos de Socket.IO
-io.on('connection', (socket) => {
-  console.log(`Usuario conectado: ${socket.user.email} (${socket.id}) - Rol: ${socket.user.role}`);
+io.on('connection', async (socket) => {
+  try {
+    // Cargar datos completos del usuario para incluir profileColor
+    const dbUser = await User.findById(socket.user.id).select('email role profileColor');
+    const userEmail = dbUser?.email || socket.user.email;
+    const userRole = dbUser?.role || socket.user.role;
+    const profileColor = dbUser?.profileColor ?? 0;
 
-  // Enviar información del usuario al conectarse
-  socket.emit('user info', {
-    id: socket.user.id,
-    email: socket.user.email,
-    role: socket.user.role
-  });
+    console.log(`Usuario conectado: ${userEmail} (${socket.id}) - Rol: ${userRole}`);
 
-  // Si es administrador, enviar lista de conversaciones
-  if (socket.user.role === 'admin') {
-    loadAdminConversations(socket);
-  } else {
-    // Si es usuario, asignar un administrador aleatorio
-    assignRandomAdmin(socket);
-  }
+    // Enviar información del usuario al conectarse (incluye profileColor)
+    socket.emit('user info', {
+      id: socket.user.id,
+      email: userEmail,
+      role: userRole,
+      profileColor
+    });
 
-  // Notificar a todos que un usuario se conectó
-  socket.broadcast.emit('user connected', {
-    userName: socket.user.email.split('@')[0],
-    role: socket.user.role,
-    timestamp: new Date()
-  });
+    // Si es administrador, enviar lista de conversaciones
+    if (userRole === 'admin') {
+      loadAdminConversations(socket);
+    } else {
+      // Si es usuario, asignar un administrador aleatorio
+      assignRandomAdmin(socket);
+    }
 
-  // Recibir y distribuir mensajes de chat
-  socket.on('chat message', async (data) => {
-    try {
-      const { content, recipientId, conversationId } = data;
-      let targetConversationId = conversationId;
+    // Notificar a todos que un usuario se conectó
+    socket.broadcast.emit('user connected', {
+      userName: userEmail.split('@')[0],
+      role: userRole,
+      timestamp: new Date()
+    });
 
-      // Determinar el destinatario y la conversación
-      if (socket.user.role === 'user') {
-        // Usuario envía mensaje a su administrador asignado
-        const assignedAdminId = userAdminAssignments.get(socket.user.id);
-        if (!assignedAdminId) {
-          // Si no tiene admin asignado, asignar uno ahora
-          const adminSockets = getAdminSockets();
-          if (adminSockets.length === 0) {
-            socket.emit('no admin available');
-            return;
+    // Recibir y distribuir mensajes de chat
+    socket.on('chat message', async (data) => {
+      try {
+        const { content, recipientId, conversationId } = data;
+        let targetConversationId = conversationId;
+
+        // Determinar el destinatario y la conversación
+        if (userRole === 'user') {
+          // Usuario envía mensaje a su administrador asignado
+          const assignedAdminId = userAdminAssignments.get(socket.user.id);
+          if (!assignedAdminId) {
+            // Si no tiene admin asignado, asignar uno ahora
+            const adminSockets = getAdminSockets();
+            if (adminSockets.length === 0) {
+              socket.emit('no admin available');
+              return;
+            }
+            const randomAdmin = adminSockets[Math.floor(Math.random() * adminSockets.length)];
+            userAdminAssignments.set(socket.user.id, randomAdmin.user.id);
+            targetConversationId = generateConversationId(socket.user.id, randomAdmin.user.id);
+            
+            // Notificar al usuario sobre la asignación
+            socket.emit('admin assigned', {
+              adminId: randomAdmin.user.id,
+              adminName: randomAdmin.user.email.split('@')[0],
+              conversationId: targetConversationId
+            });
+            
+            // Notificar al administrador sobre el nuevo usuario
+            randomAdmin.emit('new user assigned', {
+              userId: socket.user.id,
+              userName: userEmail.split('@')[0],
+              conversationId: targetConversationId
+            });
+          } else {
+            targetConversationId = generateConversationId(socket.user.id, assignedAdminId);
           }
-          const randomAdmin = adminSockets[Math.floor(Math.random() * adminSockets.length)];
-          userAdminAssignments.set(socket.user.id, randomAdmin.user.id);
-          targetConversationId = generateConversationId(socket.user.id, randomAdmin.user.id);
-          
-          // Notificar al usuario sobre la asignación
-          socket.emit('admin assigned', {
-            adminId: randomAdmin.user.id,
-            adminName: randomAdmin.user.email.split('@')[0],
-            conversationId: targetConversationId
-          });
-          
-          // Notificar al administrador sobre el nuevo usuario
-          randomAdmin.emit('new user assigned', {
-            userId: socket.user.id,
-            userName: socket.user.email.split('@')[0],
-            conversationId: targetConversationId
-          });
-        } else {
-          targetConversationId = generateConversationId(socket.user.id, assignedAdminId);
+        } else if (userRole === 'admin' && recipientId) {
+          // Administrador envía mensaje a un usuario específico
+          targetConversationId = generateConversationId(socket.user.id, recipientId);
         }
-      } else if (socket.user.role === 'admin' && recipientId) {
-        // Administrador envía mensaje a un usuario específico
-        targetConversationId = generateConversationId(socket.user.id, recipientId);
-      }
 
-      // Guardar mensaje en la base de datos
-      const message = new Message({
-        sender: new mongoose.Types.ObjectId(socket.user.id),
-        senderName: socket.user.email.split('@')[0],
-        recipient: socket.user.role === 'user' ? new mongoose.Types.ObjectId(userAdminAssignments.get(socket.user.id)) : new mongoose.Types.ObjectId(recipientId),
-        content,
-        conversationType: 'direct',
-        conversationId: targetConversationId
-      });
+        // Guardar mensaje en la base de datos
+        const message = new Message({
+          sender: new mongoose.Types.ObjectId(socket.user.id),
+          senderName: userEmail.split('@')[0],
+          recipient: userRole === 'user' ? new mongoose.Types.ObjectId(userAdminAssignments.get(socket.user.id)) : new mongoose.Types.ObjectId(recipientId),
+          content,
+          conversationType: 'direct',
+          conversationId: targetConversationId
+        });
 
-      await message.save();
+        await message.save();
 
-      // Enviar mensaje a los participantes de la conversación
-      const participants = targetConversationId.split('_');
-      const recipientSocket = findSocketByUserId(socket.user.role === 'user' ? userAdminAssignments.get(socket.user.id) : recipientId);
-      
-      if (recipientSocket) {
-        recipientSocket.emit('chat message', {
+        // Enviar mensaje a los participantes de la conversación
+        const recipientSocket = findSocketByUserId(userRole === 'user' ? userAdminAssignments.get(socket.user.id) : recipientId);
+        
+        if (recipientSocket) {
+          recipientSocket.emit('chat message', {
+            id: message._id,
+            senderId: socket.user.id,
+            senderName: message.senderName,
+            content: message.content,
+            timestamp: message.timestamp,
+            conversationId: targetConversationId
+          });
+          
+          // Si el destinatario es un administrador, actualizar su lista de conversaciones
+          if (recipientSocket.user.role === 'admin') {
+            loadAdminConversations(recipientSocket);
+          }
+        }
+
+        // También enviar al remitente para confirmación
+        socket.emit('chat message', {
           id: message._id,
           senderId: socket.user.id,
           senderName: message.senderName,
@@ -192,127 +222,115 @@ io.on('connection', (socket) => {
           timestamp: message.timestamp,
           conversationId: targetConversationId
         });
-        
-        // Si el destinatario es un administrador, actualizar su lista de conversaciones
-        if (recipientSocket.user.role === 'admin') {
-          loadAdminConversations(recipientSocket);
+
+        // Si es admin, actualizar la lista de conversaciones
+        if (userRole === 'admin') {
+          loadAdminConversations(socket);
+        }
+
+      } catch (error) {
+        console.error('Error al procesar mensaje:', error);
+        socket.emit('error', { message: 'Error al enviar mensaje' });
+      }
+    });
+
+    // Usuario está escribiendo
+    socket.on('user typing', (data) => {
+      const { isTyping, conversationId } = data;
+      
+      if (isTyping) {
+        typingUsers.set(socket.user.id, { conversationId, timestamp: Date.now() });
+      } else {
+        typingUsers.delete(socket.user.id);
+      }
+
+      // Notificar al otro participante de la conversación
+      let targetUserId;
+      if (userRole === 'user') {
+        targetUserId = userAdminAssignments.get(socket.user.id);
+      } else if (conversationId) {
+        const participants = conversationId.split('_');
+        targetUserId = participants.find(id => id !== socket.user.id);
+      }
+
+      if (targetUserId) {
+        const targetSocket = findSocketByUserId(targetUserId);
+        if (targetSocket) {
+          targetSocket.emit('user typing', {
+            userId: socket.user.id,
+            userName: userEmail.split('@')[0],
+            isTyping,
+            conversationId
+          });
         }
       }
+    });
 
-      // También enviar al remitente para confirmación
-      socket.emit('chat message', {
-        id: message._id,
-        senderId: socket.user.id,
-        senderName: message.senderName,
-        content: message.content,
-        timestamp: message.timestamp,
-        conversationId: targetConversationId
-      });
+    // Cargar historial de mensajes
+    socket.on('load messages', async (data) => {
+      try {
+        const { conversationId } = data;
+        const messages = await Message.find({ conversationId })
+          .sort({ timestamp: 1 })
+          .limit(50);
 
-      // Si es admin, actualizar la lista de conversaciones
-      if (socket.user.role === 'admin') {
-        loadAdminConversations(socket);
-      }
-
-    } catch (error) {
-      console.error('Error al procesar mensaje:', error);
-      socket.emit('error', { message: 'Error al enviar mensaje' });
-    }
-  });
-
-  // Usuario está escribiendo
-  socket.on('user typing', (data) => {
-    const { isTyping, conversationId } = data;
-    
-    if (isTyping) {
-      typingUsers.set(socket.user.id, { conversationId, timestamp: Date.now() });
-    } else {
-      typingUsers.delete(socket.user.id);
-    }
-
-    // Notificar al otro participante de la conversación
-    let targetUserId;
-    if (socket.user.role === 'user') {
-      targetUserId = userAdminAssignments.get(socket.user.id);
-    } else if (conversationId) {
-      const participants = conversationId.split('_');
-      targetUserId = participants.find(id => id !== socket.user.id);
-    }
-
-    if (targetUserId) {
-      const targetSocket = findSocketByUserId(targetUserId);
-      if (targetSocket) {
-        targetSocket.emit('user typing', {
-          userId: socket.user.id,
-          userName: socket.user.email.split('@')[0],
-          isTyping,
-          conversationId
+        socket.emit('messages loaded', {
+          conversationId,
+          messages: messages.map(msg => ({
+            id: msg._id,
+            senderId: msg.sender.toString(),
+            senderName: msg.senderName,
+            content: msg.content,
+            timestamp: msg.timestamp
+          }))
         });
+      } catch (error) {
+        console.error('Error al cargar mensajes:', error);
+        socket.emit('error', { message: 'Error al cargar mensajes' });
       }
-    }
-  });
+    });
 
-  // Cargar historial de mensajes
-  socket.on('load messages', async (data) => {
-    try {
-      const { conversationId } = data;
-      const messages = await Message.find({ conversationId })
-        .sort({ timestamp: 1 })
-        .limit(50);
+    // Cargar conversaciones (para administradores)
+    socket.on('load conversations', async () => {
+      if (userRole === 'admin') {
+        await loadAdminConversations(socket);
+      }
+    });
 
-      socket.emit('messages loaded', {
-        conversationId,
-        messages: messages.map(msg => ({
-          id: msg._id,
-          senderId: msg.sender.toString(),
-          senderName: msg.senderName,
-          content: msg.content,
-          timestamp: msg.timestamp
-        }))
-      });
-    } catch (error) {
-      console.error('Error al cargar mensajes:', error);
-      socket.emit('error', { message: 'Error al cargar mensajes' });
-    }
-  });
-
-  // Cargar conversaciones (para administradores)
-  socket.on('load conversations', async () => {
-    if (socket.user.role === 'admin') {
-      await loadAdminConversations(socket);
-    }
-  });
-
-  // Desconexión
-  socket.on('disconnect', () => {
-    console.log(`Usuario desconectado: ${socket.user.email} (${socket.id})`);
-    
-    // Limpiar asignaciones si era un administrador
-    if (socket.user.role === 'admin') {
-      for (const [userId, adminId] of userAdminAssignments.entries()) {
-        if (adminId === socket.user.id) {
-          userAdminAssignments.delete(userId);
-          // Reasignar usuarios a otro admin
-          const userSocket = findSocketByUserId(userId);
-          if (userSocket) {
-            assignRandomAdmin(userSocket);
+    // Desconexión
+    socket.on('disconnect', () => {
+      console.log(`Usuario desconectado: ${userEmail} (${socket.id})`);
+      
+      // Limpiar asignaciones si era un administrador
+      if (userRole === 'admin') {
+        for (const [userId, adminId] of userAdminAssignments.entries()) {
+          if (adminId === socket.user.id) {
+            userAdminAssignments.delete(userId);
+            // Reasignar usuarios a otro admin
+            const userSocket = findSocketByUserId(userId);
+            if (userSocket) {
+              assignRandomAdmin(userSocket);
+            }
           }
         }
+      } else {
+        // Si era usuario, limpiar su asignación
+        userAdminAssignments.delete(socket.user.id);
       }
-    } else {
-      // Si era usuario, limpiar su asignación
-      userAdminAssignments.delete(socket.user.id);
-    }
 
-    // Limpiar estado de escritura
-    typingUsers.delete(socket.user.id);
+      // Limpiar estado de escritura
+      typingUsers.delete(socket.user.id);
 
-    socket.broadcast.emit('user disconnected', {
-      userName: socket.user.email.split('@')[0],
-      role: socket.user.role,
-      timestamp: new Date()
+      socket.broadcast.emit('user disconnected', {
+        userName: userEmail.split('@')[0],
+        role: userRole,
+        timestamp: new Date()
+      });
     });
-  });
+  } catch (e) {
+    console.error('Error en conexión de socket:', e);
+    socket.emit('error', { message: 'Error de conexión' });
+  }
 });
 
 // Función para asignar un administrador aleatorio a un usuario
