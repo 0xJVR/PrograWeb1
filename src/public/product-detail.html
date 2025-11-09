@@ -82,7 +82,7 @@
     <div id="errorMessage" class="alert alert-error" style="display: none;"></div>
   </main>
 
-  <!-- Modal para editar producto (reutilizamos el mismo modal del index.html) -->
+  <!-- Modal para editar producto -->
   <div class="modal" id="productModal">
     <div class="modal-content">
       <div class="modal-header">
@@ -93,26 +93,26 @@
       <div id="modalAlert"></div>
       
       <form id="productForm" enctype="multipart/form-data">
-        <input type="hidden" id="productId">
+        <input type="hidden" id="productId" name="id">
         
         <div class="form-group">
-          <label for="productName">Nombre del Producto</label>
-          <input type="text" id="modalProductName" required>
+          <label for="modalProductName">Nombre del Producto</label>
+          <input type="text" id="modalProductName" name="name" required>
         </div>
 
         <div class="form-group">
-          <label for="productPrice">Precio (€)</label>
-          <input type="number" id="modalProductPrice" step="0.01" min="0" required>
+          <label for="modalProductPrice">Precio (€)</label>
+          <input type="number" id="modalProductPrice" name="price" step="0.01" min="0" required>
         </div>
 
         <div class="form-group">
-          <label for="productDescription">Descripción</label>
-          <textarea id="modalProductDescription" required></textarea>
+          <label for="modalProductDescription">Descripción</label>
+          <textarea id="modalProductDescription" name="description" required></textarea>
         </div>
 
         <div class="form-group">
-          <label for="productImage">Imagen del Producto</label>
-          <input type="file" id="modalProductImage" accept="image/*">
+          <label for="modalProductImage">Imagen del Producto</label>
+          <input type="file" id="modalProductImage" name="image" accept="image/*">
           <div id="modalImagePreview" style="margin-top: 1rem; display: none;">
             <img id="modalPreviewImage" src="" alt="Vista previa" style="max-width: 200px; max-height: 200px; border-radius: 8px;">
           </div>

@@ -11,6 +11,22 @@ function escapeHtml(s) {
   return d.innerHTML;
 }
 
+// Helper de moneda EUR
+function formatPriceEUR(value) {
+  const n = Number(value);
+  if (Number.isNaN(n)) return '—';
+  try {
+    return new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: 'EUR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(n);
+  } catch {
+    return `${n.toFixed(2)} €`;
+  }
+}
+
 // Verificar autenticación
 if (!token) {
   window.location.href = '/login.html';
@@ -105,7 +121,7 @@ function displayRecentUsers(users) {
   }).join('');
 }
 
-// Mostrar productos recientes
+// Mostrar productos recientes (EUR)
 function displayRecentProducts(products) {
   const container = document.getElementById('recentProductsList');
   
@@ -119,7 +135,7 @@ function displayRecentProducts(products) {
       <div class="activity-avatar">📦</div>
       <div class="activity-info">
         <div class="activity-title">${escapeHtml(product.name)}</div>
-        <div class="activity-subtitle">\$${Number(product.price).toFixed(2)}</div>
+        <div class="activity-subtitle">${formatPriceEUR(product.price)}</div>
         <div class="activity-date">${new Date(product.createdAt).toLocaleDateString('es-ES')}</div>
       </div>
     </div>
@@ -328,7 +344,7 @@ async function loadProducts(page = 1) {
   }
 }
 
-// Mostrar productos en tabla (3 columnas: Producto, Precio, Creado) con escape
+// Mostrar productos en tabla (EUR)
 function displayProducts(products) {
   const tbody = document.getElementById('productsTableBody');
   
@@ -340,8 +356,7 @@ function displayProducts(products) {
   tbody.innerHTML = products.map(product => {
     const created = new Date(product.createdAt);
     const createdStr = isNaN(created) ? '—' : created.toLocaleDateString('es-ES');
-    const priceNum = Number(product.price);
-    const priceStr = isNaN(priceNum) ? '—' : `$${priceNum.toFixed(2)}`;
+    const priceStr = formatPriceEUR(product.price);
 
     return `
       <tr>
@@ -392,7 +407,7 @@ function displayActivityUsers(users) {
   `).join('');
 }
 
-// Mostrar productos en actividad
+// Mostrar productos en actividad (EUR)
 function displayActivityProducts(products) {
   const container = document.getElementById('activityProducts');
   
@@ -406,7 +421,7 @@ function displayActivityProducts(products) {
       <div class="activity-avatar">📦</div>
       <div class="activity-info">
         <div class="activity-title">${escapeHtml(product.name)}</div>
-        <div class="activity-subtitle">\$${Number(product.price).toFixed(2)}</div>
+        <div class="activity-subtitle">${formatPriceEUR(product.price)}</div>
       </div>
     </div>
   `).join('');

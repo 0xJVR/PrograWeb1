@@ -67,26 +67,26 @@
       <div id="modalAlert"></div>
       
       <form id="productForm" enctype="multipart/form-data">
-        <input type="hidden" id="productId">
+        <input type="hidden" id="productId" name="id">
         
         <div class="form-group">
           <label for="productName">Nombre del Producto</label>
-          <input type="text" id="productName" required>
+          <input type="text" id="productName" name="name" required>
         </div>
 
         <div class="form-group">
           <label for="productPrice">Precio (€)</label>
-          <input type="number" id="productPrice" step="0.01" min="0" required>
+          <input type="number" id="productPrice" name="price" step="0.01" min="0" required>
         </div>
 
         <div class="form-group">
           <label for="productDescription">Descripción</label>
-          <textarea id="productDescription" required></textarea>
+          <textarea id="productDescription" name="description" required></textarea>
         </div>
 
         <div class="form-group">
           <label for="productImage">Imagen del Producto</label>
-          <input type="file" id="productImage" accept="image/*">
+          <input type="file" id="productImage" name="image" accept="image/*">
           <div id="imagePreview" style="margin-top: 1rem; display: none;">
             <img id="previewImage" src="" alt="Vista previa" style="max-width: 200px; max-height: 200px; border-radius: 8px;">
           </div>

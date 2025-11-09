@@ -5,7 +5,7 @@ const Product = require('../models/Product');
 const { authenticateJWT, requireAdmin } = require('../middleware/authenticateJWT');
 const path = require('path');
 const fs = require('fs');
-const { validateProduct, sanitizeString } = require('../utils/validators');
+const { validateProduct, sanitizeString, isValidUrl } = require('../utils/validators');
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, '../public/uploads');
@@ -13,7 +13,7 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Middleware para manejar subida de archivos
+// Middleware para manejar subida de archivos (usa express-fileupload)
 const handleFileUpload = (req, res, next) => {
   if (!req.files || !req.files.image) {
     return next();
@@ -111,8 +111,9 @@ router.get('/:id', async (req, res) => {
 /**
  * POST /api/products
  * Crear nuevo producto (solo admin)
- * - Sanitiza name/description para evitar XSS
- * - Valida datos de producto
+ * - Acepta JSON o multipart/form-data con archivo 'image'
+ * - Sanitiza name/description
+ * - Valida datos de producto (admite /uploads/ o URL)
  */
 router.post('/', authenticateJWT, requireAdmin, handleFileUpload, async (req, res) => {
   try {
@@ -133,7 +134,7 @@ router.post('/', authenticateJWT, requireAdmin, handleFileUpload, async (req, re
       name: sanitizeString(name),
       price,
       description: sanitizeString(description),
-      image,
+      image: image || '', // puede ser '' si no se subió
       createdBy: req.user.id
     });
 
@@ -157,9 +158,10 @@ router.post('/', authenticateJWT, requireAdmin, handleFileUpload, async (req, re
 /**
  * PUT /api/products/:id
  * Actualizar producto (solo admin)
+ * - Acepta JSON o multipart/form-data (con posible archivo 'image')
  * - Sanitiza entradas y valida si corresponde
  */
-router.put('/:id', authenticateJWT, requireAdmin, async (req, res) => {
+router.put('/:id', authenticateJWT, requireAdmin, handleFileUpload, async (req, res) => {
   try {
     let { name, price, description, image } = req.body;
 
@@ -171,7 +173,7 @@ router.put('/:id', authenticateJWT, requireAdmin, async (req, res) => {
       });
     }
 
-    // Validaciones simples si vienen campos
+    // Validaciones si vienen campos
     if (price !== undefined) {
       const n = Number(price);
       if (isNaN(n) || n < 0) {
@@ -185,7 +187,18 @@ router.put('/:id', authenticateJWT, requireAdmin, async (req, res) => {
 
     if (name !== undefined) product.name = sanitizeString(name);
     if (description !== undefined) product.description = sanitizeString(description);
-    if (image !== undefined) product.image = image;
+
+    if (image !== undefined) {
+      // image puede ser una ruta /uploads/... o una URL
+      const isRelativeUpload = typeof image === 'string' && image.startsWith('/uploads/');
+      if (!isRelativeUpload && image !== '' && !isValidUrl(image)) {
+        return res.status(400).json({
+          success: false,
+          message: 'La URL o ruta de la imagen no es válida'
+        });
+      }
+      product.image = image; // vacío '' para eliminar, o nueva ruta/url
+    }
 
     await product.save();
 
@@ -207,6 +220,7 @@ router.put('/:id', authenticateJWT, requireAdmin, async (req, res) => {
 /**
  * POST /api/products/:id/image
  * Subir nueva imagen para un producto (solo admin)
+ * (Se mantiene por compatibilidad; ahora PUT también acepta archivo)
  */
 router.post('/:id/image', authenticateJWT, requireAdmin, handleFileUpload, async (req, res) => {
   try {
@@ -225,7 +239,6 @@ router.post('/:id/image', authenticateJWT, requireAdmin, handleFileUpload, async
       });
     }
 
-    // Actualizar solo la imagen
     product.image = req.body.image;
     await product.save();
 

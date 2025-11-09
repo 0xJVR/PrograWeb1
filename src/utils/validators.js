@@ -25,6 +25,7 @@ const isStrongPassword = (password) => {
 
 /**
  * Validar datos de producto
+ * - Acepta URLs absolutas o rutas relativas a /uploads/ para la imagen
  */
 const validateProduct = (productData) => {
   const errors = [];
@@ -33,7 +34,7 @@ const validateProduct = (productData) => {
     errors.push('El nombre del producto es requerido');
   }
 
-  if (!productData.price || isNaN(productData.price) || productData.price < 0) {
+  if (productData.price === undefined || productData.price === null || isNaN(productData.price) || Number(productData.price) < 0) {
     errors.push('El precio debe ser un número válido mayor o igual a 0');
   }
 
@@ -41,8 +42,12 @@ const validateProduct = (productData) => {
     errors.push('La descripción es requerida');
   }
 
-  if (productData.image && !isValidUrl(productData.image)) {
-    errors.push('La URL de la imagen no es válida');
+  if (productData.image) {
+    const img = String(productData.image);
+    const isRelativeUpload = img.startsWith('/uploads/');
+    if (!isRelativeUpload && !isValidUrl(img)) {
+      errors.push('La URL o ruta de la imagen no es válida');
+    }
   }
 
   return {
@@ -52,7 +57,7 @@ const validateProduct = (productData) => {
 };
 
 /**
- * Validar URL
+ * Validar URL absoluta
  */
 const isValidUrl = (url) => {
   try {

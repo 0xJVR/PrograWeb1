@@ -17,6 +17,22 @@ const GRADIENTS = [
   'linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%)'
 ];
 
+// Formateador EUR
+function formatPriceEUR(value) {
+  const n = Number(value);
+  if (Number.isNaN(n)) return '—';
+  try {
+    return new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: 'EUR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(n);
+  } catch {
+    return `${n.toFixed(2)} €`;
+  }
+}
+
 // Inicializar aplicación
 document.addEventListener('DOMContentLoaded', () => {
   checkAuthentication();
@@ -144,7 +160,6 @@ async function loadProduct(productId) {
       currentProduct = data.product;
       renderProduct(currentProduct);
       
-      // Mostrar acciones de admin si es necesario
       if (currentUser && currentUser.role === 'admin') {
         document.getElementById('productActions').style.display = 'flex';
       }
@@ -163,11 +178,11 @@ async function loadProduct(productId) {
 
 // Renderizar producto
 function renderProduct(product) {
-  const imageUrl = product.image;
+  const imageUrl = product.image || 'https://via.placeholder.com/800x600?text=Producto';
   document.getElementById('productImage').src = imageUrl;
   document.getElementById('productImage').alt = product.name;
   document.getElementById('productName').textContent = product.name;
-  document.getElementById('productPrice').textContent = `$${parseFloat(product.price).toFixed(2)}`;
+  document.getElementById('productPrice').textContent = formatPriceEUR(product.price);
   document.getElementById('productDescription').textContent = product.description;
   
   // Fechas del producto
@@ -183,7 +198,7 @@ function renderProduct(product) {
   if (product.updatedAt) {
     const updatedAt = new Date(product.updatedAt);
     const createdTime = new Date(product.createdAt);
-    if ((updatedAt - createdTime) > 1000) { // mostrar solo si difiere > 1s
+    if ((updatedAt - createdTime) > 1000) {
       const el = document.getElementById('productUpdatedAt');
       el.textContent = `Actualizado: ${updatedAt.toLocaleDateString('es-ES', {
         year: 'numeric',
@@ -207,42 +222,37 @@ function setupEventListeners() {
   const cancelBtn = document.getElementById('cancelBtn');
   const productForm = document.getElementById('productForm');
   const modal = document.getElementById('productModal');
+  const modalProductImage = document.getElementById('modalProductImage');
 
-  if (backButton) {
-    backButton.addEventListener('click', () => {
-      window.location.href = '/';
-    });
-  }
-
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', logout);
-  }
-
-  if (editProductBtn) {
-    editProductBtn.addEventListener('click', () => openEditProductModal());
-  }
-
-  if (deleteProductBtn) {
-    deleteProductBtn.addEventListener('click', () => deleteProduct());
-  }
-
-  if (closeModal) {
-    closeModal.addEventListener('click', closeProductModal);
-  }
-
-  if (cancelBtn) {
-    cancelBtn.addEventListener('click', closeProductModal);
-  }
-
-  if (productForm) {
-    productForm.addEventListener('submit', handleProductUpdate);
-  }
+  if (backButton) backButton.addEventListener('click', () => { window.location.href = '/'; });
+  if (logoutBtn) logoutBtn.addEventListener('click', logout);
+  if (editProductBtn) editProductBtn.addEventListener('click', () => openEditProductModal());
+  if (deleteProductBtn) deleteProductBtn.addEventListener('click', () => deleteProduct());
+  if (closeModal) closeModal.addEventListener('click', closeProductModal);
+  if (cancelBtn) cancelBtn.addEventListener('click', closeProductModal);
+  if (productForm) productForm.addEventListener('submit', handleProductUpdate);
 
   if (modal) {
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
         closeProductModal();
       }
+    });
+  }
+
+  // Vista previa imagen en modal
+  if (modalProductImage) {
+    modalProductImage.addEventListener('change', () => {
+      const file = modalProductImage.files && modalProductImage.files[0];
+      const previewWrap = document.getElementById('modalImagePreview');
+      const previewImg = document.getElementById('modalPreviewImage');
+      if (!file || !previewWrap || !previewImg) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        previewImg.src = reader.result;
+        previewWrap.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
     });
   }
 }
@@ -258,6 +268,7 @@ function openEditProductModal() {
   const productPrice = document.getElementById('modalProductPrice');
   const productDescription = document.getElementById('modalProductDescription');
   const productImage = document.getElementById('modalProductImage');
+  const previewWrap = document.getElementById('modalImagePreview');
 
   modalTitle.textContent = 'Editar Producto';
   productId.value = currentProduct._id;
@@ -265,6 +276,7 @@ function openEditProductModal() {
   productPrice.value = currentProduct.price;
   productDescription.value = currentProduct.description;
   if (productImage) productImage.value = '';
+  if (previewWrap) previewWrap.style.display = 'none';
 
   modal.classList.add('show');
   document.body.classList.add('modal-open');
@@ -277,7 +289,7 @@ function closeProductModal() {
   
   modal.classList.remove('show');
   document.body.classList.remove('modal-open');
-  modalAlert.innerHTML = '';
+  if (modalAlert) modalAlert.innerHTML = '';
 }
 
 // Manejar actualización del producto
@@ -285,7 +297,7 @@ async function handleProductUpdate(e) {
   e.preventDefault();
 
   const modalAlert = document.getElementById('modalAlert');
-  modalAlert.innerHTML = '';
+  if (modalAlert) modalAlert.innerHTML = '';
 
   const token = localStorage.getItem('token');
 
@@ -295,17 +307,17 @@ async function handleProductUpdate(e) {
   }
 
   try {
+    const formEl = document.getElementById('productForm');
+    const fd = new FormData(formEl);
+    // Relleno por si acaso el navegador no actualiza nombre/precio/desc
+    fd.set('name', document.getElementById('modalProductName').value);
+    fd.set('price', document.getElementById('modalProductPrice').value);
+    fd.set('description', document.getElementById('modalProductDescription').value);
+
     const response = await fetch(`${API_URL}/products/${currentProduct._id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        name: document.getElementById('modalProductName').value,
-        price: parseFloat(document.getElementById('modalProductPrice').value),
-        description: document.getElementById('modalProductDescription').value
-      })
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: fd
     });
 
     const data = await response.json();
@@ -316,7 +328,7 @@ async function handleProductUpdate(e) {
       setTimeout(() => {
         closeProductModal();
         renderProduct(currentProduct);
-      }, 1500);
+      }, 800);
     } else {
       showModalError(data.message || 'Error al actualizar producto');
     }
@@ -342,9 +354,7 @@ async function deleteProduct() {
   try {
     const response = await fetch(`${API_URL}/products/${currentProduct._id}`, {
       method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+      headers: { 'Authorization': `Bearer ${token}` }
     });
 
     const data = await response.json();
@@ -353,7 +363,7 @@ async function deleteProduct() {
       showSuccess(data.message);
       setTimeout(() => {
         window.location.href = '/';
-      }, 1500);
+      }, 1000);
     } else {
       showError(data.message || 'Error al eliminar producto');
     }
@@ -366,6 +376,7 @@ async function deleteProduct() {
 // Mostrar error en modal
 function showModalError(message) {
   const modalAlert = document.getElementById('modalAlert');
+  if (!modalAlert) return;
   modalAlert.innerHTML = `
     <div class="alert alert-error">
       ${message}
@@ -376,6 +387,7 @@ function showModalError(message) {
 // Mostrar éxito en modal
 function showModalSuccess(message) {
   const modalAlert = document.getElementById('modalAlert');
+  if (!modalAlert) return;
   modalAlert.innerHTML = `
     <div class="alert alert-success">
       ${message}
@@ -397,8 +409,5 @@ function showSuccess(message) {
   alert.className = 'alert alert-success';
   alert.textContent = message;
   container.insertBefore(alert, container.firstChild);
-
-  setTimeout(() => {
-    alert.remove();
-  }, 5000);
+  setTimeout(() => { alert.remove(); }, 5000);
 }

@@ -19,7 +19,8 @@ const productSchema = new mongoose.Schema({
   },
   image: {
     type: String,
-    default: 'https://via.placeholder.com/400x300?text=Producto'
+    trim: true,
+    default: ''
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,

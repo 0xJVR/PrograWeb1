@@ -28,11 +28,25 @@ function escapeHtml(s) {
   return d.innerHTML;
 }
 
+// Helper de moneda EUR
+function formatPriceEUR(value) {
+  const n = Number(value);
+  if (Number.isNaN(n)) return '—';
+  try {
+    return new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: 'EUR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(n);
+  } catch {
+    return `${n.toFixed(2)} €`;
+  }
+}
+
 // Inicializar aplicación (aseguramos auth antes de productos)
 document.addEventListener('DOMContentLoaded', async () => {
-  try {
-    await checkAuthentication();
-  } catch {}
+  try { await checkAuthentication(); } catch {}
   await loadProducts();
   setupEventListeners();
 });
@@ -58,7 +72,6 @@ async function checkAuthentication() {
     }
 
     updateUIForAuthenticatedUser();
-    // Si ya hubiéramos cargado productos, re-render para mostrar acciones de admin
     if (products.length) renderProducts(products);
   } else {
     updateUIForGuestUser();
@@ -78,21 +91,17 @@ function updateUIForAuthenticatedUser() {
   const addProductBtn = document.getElementById('addProductBtn');
   const welcomeMessage = document.getElementById('welcomeMessage');
 
-  // Verificar que tengamos datos del usuario válidos
   if (!currentUser || !currentUser.email) {
     console.error('Datos de usuario inválidos en localStorage');
     logout();
     return;
   }
 
-  // Usar name si existe, si no usar email como fallback
   const displayName = currentUser.name || currentUser.email.split('@')[0];
 
-  // Ocultar links de login/registro
   if (loginLink) loginLink.style.display = 'none';
   if (registerLink) registerLink.style.display = 'none';
 
-  // Mostrar información del usuario
   if (userInfo) userInfo.style.display = 'flex';
   if (userAvatar) {
     userAvatar.textContent = displayName.charAt(0).toUpperCase();
@@ -105,18 +114,13 @@ function updateUIForAuthenticatedUser() {
     userRole.className = `role-badge ${currentUser.role || 'user'}`;
   }
 
-  // Mostrar botón de logout
   if (logoutBtn) logoutBtn.style.display = 'block';
-
-  // Mostrar link de chat
   if (chatLink) chatLink.style.display = 'block';
 
-  // Mostrar botón de agregar producto si es admin
   if (currentUser.role === 'admin' && addProductBtn) {
     addProductBtn.style.display = 'block';
   }
 
-  // Mensaje de bienvenida
   if (welcomeMessage) {
     const welcomeRole = currentUser.role === 'admin' ? 'Administrador' : 'Usuario';
     welcomeMessage.innerHTML = `
@@ -126,10 +130,7 @@ function updateUIForAuthenticatedUser() {
     `;
     welcomeMessage.style.display = 'block';
     
-    // Ocultar mensaje después de 3 segundos
-    setTimeout(() => {
-      welcomeMessage.style.display = 'none';
-    }, 3000);
+    setTimeout(() => { welcomeMessage.style.display = 'none'; }, 3000);
   }
 }
 
@@ -158,25 +159,15 @@ function setupEventListeners() {
   const productsGrid = document.getElementById('productsGrid');
   const productImageInput = document.getElementById('productImage');
 
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', logout);
-  }
+  if (logoutBtn) logoutBtn.addEventListener('click', logout);
 
   if (addProductBtn) {
     addProductBtn.addEventListener('click', () => openProductModal());
   }
 
-  if (closeModal) {
-    closeModal.addEventListener('click', closeProductModal);
-  }
-
-  if (cancelBtn) {
-    cancelBtn.addEventListener('click', closeProductModal);
-  }
-
-  if (productForm) {
-    productForm.addEventListener('submit', handleProductSubmit);
-  }
+  if (closeModal) closeModal.addEventListener('click', closeProductModal);
+  if (cancelBtn) cancelBtn.addEventListener('click', closeProductModal);
+  if (productForm) productForm.addEventListener('submit', handleProductSubmit);
 
   // Delegación de eventos para acciones de producto (sin inline JS)
   if (productsGrid) {
@@ -294,7 +285,7 @@ function renderProducts(productsToRender) {
       >
       <div class="product-info">
         <h3 class="product-name" data-view-id="${product._id}" style="cursor:pointer;">${escapeHtml(product.name)}</h3>
-        <p class="product-price">$${parseFloat(product.price).toFixed(2)}</p>
+        <p class="product-price">${formatPriceEUR(product.price)}</p>
         <p class="product-description">${escapeHtml(product.description)}</p>
         ${currentUser && currentUser.role === 'admin' ? `
           <div class="product-actions">
@@ -370,7 +361,6 @@ async function handleProductSubmit(e) {
   if (modalAlert) modalAlert.innerHTML = '';
 
   const token = localStorage.getItem('token');
-
   if (!token) {
     showModalError('Debes iniciar sesión para realizar esta acción');
     return;
@@ -381,34 +371,23 @@ async function handleProductSubmit(e) {
       ? `${API_URL}/products/${currentProductId}` 
       : `${API_URL}/products`;
     
-    const method = isEditMode ? 'PUT' : 'POST';
+    // Enviar SIEMPRE como FormData (así soporta actualización de imagen en PUT)
+    const formEl = document.getElementById('productForm');
+    const fd = new FormData(formEl);
 
-    let response;
-    if (method === 'POST') {
-      // Crear con posible imagen (FormData)
-      const formEl = document.getElementById('productForm');
-      const fd = new FormData(formEl);
-      response = await fetch(url, {
-        method,
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: fd
-      });
-    } else {
-      // Editar sin cambio de imagen (JSON simple)
-      const productData = {
-        name: document.getElementById('productName').value,
-        price: parseFloat(document.getElementById('productPrice').value),
-        description: document.getElementById('productDescription').value
-      };
-      response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(productData)
-      });
+    // Si estamos editando, añadimos campos básicos por seguridad (en caso de que el navegador no los incluya)
+    if (isEditMode) {
+      fd.set('name', document.getElementById('productName').value);
+      fd.set('price', document.getElementById('productPrice').value);
+      fd.set('description', document.getElementById('productDescription').value);
+      // Si no se selecciona imagen, el campo 'image' no se envía y el servidor no la toca
     }
+
+    const response = await fetch(url, {
+      method: isEditMode ? 'PUT' : 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: fd
+    });
 
     const data = await response.json();
 
@@ -417,9 +396,9 @@ async function handleProductSubmit(e) {
       setTimeout(() => {
         closeProductModal();
         loadProducts();
-      }, 1500);
+      }, 1000);
     } else {
-      showModalError(data.message || 'Error al guardar producto');
+      showModalError(data.message || (data.errors && data.errors.join(', ')) || 'Error al guardar producto');
     }
   } catch (error) {
     console.error('Error:', error);
@@ -437,12 +416,9 @@ async function editProduct(productId) {
 
 // Eliminar producto
 async function deleteProduct(productId) {
-  if (!confirm('¿Estás seguro de que deseas eliminar este producto?')) {
-    return;
-  }
+  if (!confirm('¿Estás seguro de que deseas eliminar este producto?')) return;
 
   const token = localStorage.getItem('token');
-
   if (!token) {
     alert('Debes iniciar sesión para realizar esta acción');
     return;
@@ -451,9 +427,7 @@ async function deleteProduct(productId) {
   try {
     const response = await fetch(`${API_URL}/products/${productId}`, {
       method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+      headers: { 'Authorization': `Bearer ${token}` }
     });
 
     const data = await response.json();
@@ -500,10 +474,7 @@ function showError(message) {
   alert.className = 'alert alert-error';
   alert.textContent = message;
   container.insertBefore(alert, container.firstChild);
-
-  setTimeout(() => {
-    alert.remove();
-  }, 5000);
+  setTimeout(() => { alert.remove(); }, 5000);
 }
 
 // Mostrar éxito general
@@ -514,8 +485,5 @@ function showSuccess(message) {
   alert.className = 'alert alert-success';
   alert.textContent = message;
   container.insertBefore(alert, container.firstChild);
-
-  setTimeout(() => {
-    alert.remove();
-  }, 5000);
+  setTimeout(() => { alert.remove(); }, 5000);
 }
