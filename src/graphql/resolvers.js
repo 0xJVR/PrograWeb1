@@ -237,10 +237,6 @@ const resolvers = {
             }
             return 0;
         }
-    },
-
-    User: {
-        password: () => null // Ensure password never leaks
     }
 };
 

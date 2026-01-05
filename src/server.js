@@ -72,33 +72,25 @@ app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 
 // GraphQL Setup
-const { ApolloServer } = require('@apollo/server');
-const { expressMiddleware } = require('@apollo/server/express4');
+const { ApolloServer } = require('apollo-server-express');
 const typeDefs = require('./graphql/schema');
 const resolvers = require('./graphql/resolvers');
 
 const apolloServer = new ApolloServer({
   typeDefs,
   resolvers,
-});
-
-// Start Apollo Server and then apply middleware
-apolloServer.start().then(() => {
-  app.use('/graphql', cors(), express.json(), expressMiddleware(apolloServer, {
-    context: async ({ req }) => {
-      const token = req.headers.authorization || '';
-      if (token.startsWith('Bearer ')) {
-        try {
-          const decoded = jwt.verify(token.replace('Bearer ', ''), config.jwtSecret);
-          return { user: decoded };
-        } catch (e) {
-          return { user: null };
-        }
+  context: ({ req }) => {
+    const token = req.headers.authorization || '';
+    if (token.startsWith('Bearer ')) {
+      try {
+        const decoded = jwt.verify(token.replace('Bearer ', ''), config.jwtSecret);
+        return { user: decoded };
+      } catch (e) {
+        return { user: null };
       }
-      return { user: null };
-    },
-  }));
-  console.log('GraphQL server ready at /graphql');
+    }
+    return { user: null };
+  },
 });
 
 // Ruta principal
@@ -514,14 +506,22 @@ function findSocketByUserId(userId) {
   return sockets.find(socket => socket.user && socket.user.id === userId);
 }
 
-// 404 y manejo de errores (usar middlewares dedicados)
-app.use(notFound);
-app.use(errorHandler);
+// Iniciar servidor (después de que Apollo esté listo)
+async function startServer() {
+  await apolloServer.start();
+  apolloServer.applyMiddleware({ app, path: '/graphql' });
+  console.log('GraphQL server ready at /graphql');
 
-// Iniciar servidor
-server.listen(config.port, () => {
-  console.log(`Servidor corriendo en http://localhost:${config.port}`);
-  console.log(`Modo: ${config.nodeEnv}`);
-});
+  // 404 y manejo de errores (DEBE ser después de GraphQL middleware)
+  app.use(notFound);
+  app.use(errorHandler);
+
+  server.listen(config.port, () => {
+    console.log(`Servidor corriendo en http://localhost:${config.port}`);
+    console.log(`Modo: ${config.nodeEnv}`);
+  });
+}
+
+startServer();
 
 module.exports = { app, server, io };
