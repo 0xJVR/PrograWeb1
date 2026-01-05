@@ -71,6 +71,36 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 
+// GraphQL Setup
+const { ApolloServer } = require('@apollo/server');
+const { expressMiddleware } = require('@apollo/server/express4');
+const typeDefs = require('./graphql/schema');
+const resolvers = require('./graphql/resolvers');
+
+const apolloServer = new ApolloServer({
+  typeDefs,
+  resolvers,
+});
+
+// Start Apollo Server and then apply middleware
+apolloServer.start().then(() => {
+  app.use('/graphql', cors(), express.json(), expressMiddleware(apolloServer, {
+    context: async ({ req }) => {
+      const token = req.headers.authorization || '';
+      if (token.startsWith('Bearer ')) {
+        try {
+          const decoded = jwt.verify(token.replace('Bearer ', ''), config.jwtSecret);
+          return { user: decoded };
+        } catch (e) {
+          return { user: null };
+        }
+      }
+      return { user: null };
+    },
+  }));
+  console.log('GraphQL server ready at /graphql');
+});
+
 // Ruta principal
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -78,13 +108,13 @@ app.get('/', (req, res) => {
 
 // Conectar a MongoDB
 mongoose.connect(config.mongodbUri)
-.then(() => {
-  console.log('Conectado a MongoDB');
-})
-.catch((error) => {
-  console.error('Error al conectar a MongoDB:', error);
-  process.exit(1);
-});
+  .then(() => {
+    console.log('Conectado a MongoDB');
+  })
+  .catch((error) => {
+    console.error('Error al conectar a MongoDB:', error);
+    process.exit(1);
+  });
 
 // Validación de secreto JWT en producción
 if (config.nodeEnv !== 'development' && (!process.env.JWT_SECRET || config.jwtSecret === 'clave_secreta_por_defecto')) {
@@ -94,7 +124,7 @@ if (config.nodeEnv !== 'development' && (!process.env.JWT_SECRET || config.jwtSe
 // Middleware de autenticación para Socket.IO
 io.use((socket, next) => {
   const token = socket.handshake.auth.token;
-  
+
   if (!token) {
     return next(new Error('Token de autenticación requerido'));
   }
@@ -188,14 +218,14 @@ io.on('connection', async (socket) => {
             const randomAdmin = adminSockets[Math.floor(Math.random() * adminSockets.length)];
             userAdminAssignments.set(socket.user.id, randomAdmin.user.id);
             targetConversationId = generateConversationId(socket.user.id, randomAdmin.user.id);
-            
+
             // Notificar al usuario sobre la asignación
             socket.emit('admin assigned', {
               adminId: randomAdmin.user.id,
               adminName: randomAdmin.user.email.split('@')[0],
               conversationId: targetConversationId
             });
-            
+
             // Notificar al administrador sobre el nuevo usuario
             randomAdmin.emit('new user assigned', {
               userId: socket.user.id,
@@ -224,7 +254,7 @@ io.on('connection', async (socket) => {
 
         // Enviar mensaje a los participantes de la conversación
         const recipientSocket = findSocketByUserId(userRole === 'user' ? userAdminAssignments.get(socket.user.id) : recipientId);
-        
+
         if (recipientSocket) {
           recipientSocket.emit('chat message', {
             id: message._id,
@@ -234,7 +264,7 @@ io.on('connection', async (socket) => {
             timestamp: message.timestamp,
             conversationId: targetConversationId
           });
-          
+
           // Si el destinatario es un administrador, actualizar su lista de conversaciones
           if (recipientSocket.user.role === 'admin') {
             loadAdminConversations(recipientSocket);
@@ -265,7 +295,7 @@ io.on('connection', async (socket) => {
     // Usuario está escribiendo
     socket.on('user typing', (data) => {
       const { isTyping, conversationId } = data;
-      
+
       if (isTyping) {
         typingUsers.set(socket.user.id, { conversationId, timestamp: Date.now() });
       } else {
@@ -328,7 +358,7 @@ io.on('connection', async (socket) => {
     // Desconexión
     socket.on('disconnect', () => {
       console.log(`Usuario desconectado: ${userEmail} (${socket.id})`);
-      
+
       // Limpiar asignaciones si era un administrador
       if (userRole === 'admin') {
         for (const [userId, adminId] of userAdminAssignments.entries()) {
@@ -381,7 +411,7 @@ function assignRandomAdmin(userSocket) {
 
   const randomAdmin = adminSockets[Math.floor(Math.random() * adminSockets.length)];
   userAdminAssignments.set(userSocket.user.id, randomAdmin.user.id);
-  
+
   userSocket.emit('admin assigned', {
     adminId: randomAdmin.user.id,
     adminName: randomAdmin.user.email.split('@')[0],
@@ -394,7 +424,7 @@ function assignRandomAdmin(userSocket) {
     userName: userSocket.user.email.split('@')[0],
     conversationId: generateConversationId(userSocket.user.id, randomAdmin.user.id)
   });
-  
+
   // Actualizar la lista de conversaciones del administrador
   loadAdminConversations(randomAdmin);
 }

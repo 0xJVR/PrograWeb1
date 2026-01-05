@@ -2,7 +2,9 @@
 
 [Repositorio del proyecto](https://github.com/0xJVR/PrograWeb1)
 
-Proyecto Node.js que expone un portal de productos con autenticación JWT, panel de administración, chat en tiempo real con Socket.IO y gestión de usuarios/productos sobre MongoDB. La interfaz web es una SPA servida estáticamente desde Express y programada con JavaScript vanilla.
+Proyecto Node.js para un portal de productos, con autenticación JWT, panel de administración, chat en tiempo real con Socket.IO y gestión de usuarios/productos sobre MongoDB. La interfaz web es una SPA servida estáticamente desde Express y programada con JavaScript.
+
+**Actualización E-commerce (Práctica 2):** Incorpora carrito de compras, gestión de pedidos y API GraphQL.
 
 ## Prueba en producción:
 
@@ -95,6 +97,7 @@ Los datos de ejemplo también pueden inicializarse directamente con `src/scripts
   - **`User.js`**: esquema de Usuario con `name`, `email`, `password` (hash `bcrypt`), `role` (`user|admin`), `profileColor`, `createdAt`. Hooks para hashear contraseña y método `comparePassword`. Oculta `password` en `toJSON`.
   - **`Product.js`**: esquema de Producto (`name`, `price`, `description`, `image`, `createdBy`, `createdAt`, `updatedAt`). Hook `pre('save')` para mantener `updatedAt`.
   - **`Message.js`**: mensajes de chat con `sender`, `senderName`, `recipient`, `content`, `timestamp`, `conversationType`, `conversationId`. Índices para consultas por conversación y fecha.
+  - **`Order.js`**: Pedidos de e-commerce con `user`, `items` (snapshot de productos), `total`, `status` (`pending`, `completed`) y `createdAt`.
 
 - **Rutas (`src/routes/*.js`)**
   - **`authRoutes.js`**: registro, login y verificación de token. Devuelve JWT y datos básicos del usuario.
@@ -171,6 +174,12 @@ Los datos de ejemplo también pueden inicializarse directamente con `src/scripts
 
 > Todas las rutas protegidas requieren encabezado `Authorization: Bearer <token>`.
 
+### GraphQL (`/graphql`)
+API principal para e-commerce.
+- **Queries**: `products`, `product(id)`, `myCart`, `myOrders`, `orders` (admin), `order(id)` (admin).
+- **Mutations**: `addToCart`, `updateCartItem`, `removeFromCart`, `checkout`, `setOrderStatus` (admin).
+
+### REST API
 - **Auth**
   - `POST /api/auth/register` - Registro (fuerza rol `user`).
   - `POST /api/auth/login` - Login con email/contraseña.
@@ -210,7 +219,7 @@ Los datos de ejemplo también pueden inicializarse directamente con `src/scripts
 
 ## Credenciales de ejemplo
 
-Con el *seed* de datos:
+Con el seed de datos:
 
 - **Admin**: `admin@test.com` / `admin123`  
 - **Usuario**: `user@test.com` / `user123`
@@ -219,11 +228,11 @@ Con el *seed* de datos:
 
 ## Decisiones de diseño y consideraciones técnicas
 
-- **JWT como mecanismo de autenticación**  
+- **JWT como mecanismo de autenticación**
   Simplicidad y compatibilidad con SPA + Socket.IO. El token se envía en `Authorization` y también en el handshake del socket.
 
-- **Separación clara de responsabilidades**  
-  - Modelos Mongoose encapsulan validaciones y hooks.  
+- **Separación de responsabilidades**
+  - Modelos Mongoose encapsulan validaciones y hooks.
   - Rutas por dominio funcional (`auth`, `products`, `users`, `chat`, `admin`).  
   - Middlewares horizontales para autenticación, errores y rate limiting.  
   - Utilidades para validación/sanitización y logging.
@@ -265,6 +274,42 @@ Con el *seed* de datos:
 
 ---
 
+## Detalles de Implementación GraphQL
+
+### Eschema y Tipos
+El esquema GraphQL se ha diseñado para cubrir las necesidades del e-commerce manteniendo la consistencia con los modelos de Mongoose.
+
+- **Types Principales**:
+  - `Product`: Espejo del modelo MongoDB. Campos: `id`, `name`, `description`, `price`, `image`, `stock`.
+  - `Order`: Representa una compra finalizada. Contiene `items` (snapshot), `total`, `status` y referencia al `user`.
+  - `Cart`: Estructura embebida en el usuario. Calcula dinámicamente el `total` sumando sus `items`.
+  - `User`: Expone datos seguros (no password). Incluye el campo `cart`.
+
+### Decisiones de Diseño GraphQL
+
+1. **Persistencia del Carrito (Server-side)**
+   - **Decisión**: Almacenar el carrito en el documento del `User` en MongoDB (`user.cart`), en lugar de LocalStorage o una colección separada.
+   - **Razón**: Permite persistencia entre sesiones y dispositivos. Si el usuario se loguea en otro navegador, su carrito sigue ahí.
+   - **Implementación**: El resolver `myCart` y la mutación `addToCart` leen/escriben directamente en `req.user.cart`.
+
+2. **Snapshot de Precios en Pedidos**
+   - **Decisión**: Al crear una orden (`checkout`), se copian los datos del producto (nombre, precio) en ese instante.
+   - **Razón**: Evita que cambios futuros en el precio de un producto afecten al historial de pedidos pasados. El `OrderItem` es inmutable respecto al catálogo.
+
+3. **Autenticación Unificada**
+   - **Decisión**: Reutilizar el middleware de Express y el token JWT existente.
+   - **Implementación**: `ApolloServer` recibe el token en el contexto. Los resolvers verifican `context.user` y lanzan errores `UNAUTHENTICATED` o `FORBIDDEN` sin necesidad de lógica de auth adicional en GraphQL.
+
+4. **Separación de Responsabilidades en Resolvers**
+   - Queries de Admin (`orders`, `users`) verifican explícitamente `role === 'admin'`.
+   - Queries de Usuario (`myOrders`, `myCart`) usan el ID del contexto para asegurar que cada usuario solo vea sus propios datos.
+   - Mutaciones como `setOrderStatus` están estrictamente limitadas a administradores.
+
+5. **Resolución de Campos Calculados**
+   - Campos como `Cart.total` o `OrderItem.lineTotal` se calculan en el resolver, asegurando que el frontend siempre reciba el valor aritméticamente correcto sin tener que replicar la lógica de negocio.
+
+---
+
 ## Dependencias y por qué se usan
 
 - **express**: framework HTTP minimalista para la API y servido de estáticos.  
@@ -278,6 +323,7 @@ Con el *seed* de datos:
 - **bcryptjs**: hash y verificación de contraseñas en `User`.  
 - **dotenv**: carga de variables de entorno desde `.env`.  
 - **path / fs**: manipulación de rutas de ficheros y persistencia de imágenes.
+- **graphql / @apollo/server**: API GraphQL para productos y pedidos.
 
 **Código propio**:
 - `middleware/rateLimiter.js`: limitador simple en memoria (por IP).  
@@ -298,5 +344,3 @@ Con el *seed* de datos:
 - **Subida de archivos**: solo `jpeg/png/gif/webp` y ≤ 5 MB.  
 - **XSS**: sanitización de entrada en backend y `escapeHtml` en render de frontend.  
 - **CSP**: desactivada en `helmet` para facilitar desarrollo; ajustar en producción si se desea una política estricta.
-
----

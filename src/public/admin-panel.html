@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +9,7 @@
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/admin-panel.css">
 </head>
+
 <body>
   <div class="animated-bg"></div>
 
@@ -39,6 +41,9 @@
           <button class="admin-menu-item" data-section="products">
             📦 Productos
           </button>
+          <button class="admin-menu-item" data-section="orders">
+            🛒 Pedidos
+          </button>
           <button class="admin-menu-item" data-section="activity">
             📋 Actividad
           </button>
@@ -52,7 +57,7 @@
           <div class="section-header">
             <h1>Dashboard</h1>
           </div>
-          
+
           <div class="stats-grid">
             <div class="stat-card">
               <div class="stat-icon">👥</div>
@@ -168,6 +173,42 @@
           <div class="pagination" id="productsPagination"></div>
         </section>
 
+        <!-- Gestión de Pedidos -->
+        <section id="orders-section" class="admin-section">
+          <div class="section-header">
+            <h1>Gestión de Pedidos</h1>
+            <div class="search-bar">
+              <select id="orderStatusFilter" onchange="loadOrders()">
+                <option value="">Todos los estados</option>
+                <option value="pending">Pendientes</option>
+                <option value="completed">Completados</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="ordersAlert"></div>
+
+          <div class="table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>ID Pedido</th>
+                  <th>Usuario</th>
+                  <th>Total</th>
+                  <th>Estado</th>
+                  <th>Fecha</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTableBody">
+                <tr>
+                  <td colspan="6" style="text-align: center; padding: 2rem;">Cargando...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         <!-- Actividad -->
         <section id="activity-section" class="admin-section">
           <div class="section-header">
@@ -206,7 +247,7 @@
 
       <form id="editUserForm" class="modal-form">
         <input type="hidden" id="editUserId">
-        
+
         <div class="form-group">
           <label for="editUserName">Nombre</label>
           <input type="text" id="editUserName" required>
@@ -229,7 +270,8 @@
   </div>
 
   <!-- Modal de confirmación de eliminación -->
-  <div class="modal" id="deleteConfirmModal" role="dialog" aria-modal="true" aria-labelledby="deleteConfirmTitle" tabindex="-1">
+  <div class="modal" id="deleteConfirmModal" role="dialog" aria-modal="true" aria-labelledby="deleteConfirmTitle"
+    tabindex="-1">
     <div class="modal-content" role="document">
       <div class="modal-header">
         <h3 id="deleteConfirmTitle">Confirmar Eliminación</h3>
@@ -251,6 +293,8 @@
     <p>Javier Salmerón</p>
   </footer>
 
+  <script src="/graphql-client.js"></script>
   <script src="/admin-panel.js"></script>
 </body>
+
 </html>

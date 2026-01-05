@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Carrito - Portal de Productos</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        .cart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin-top: 2rem;
+        }
+
+        .cart-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .cart-item:last-child {
+            border-bottom: none;
+        }
+
+        .cart-item-image {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-right: 1.5rem;
+        }
+
+        .cart-item-details {
+            flex: 1;
+        }
+
+        .cart-item-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .cart-item-price {
+            color: var(--color-primary);
+        }
+
+        .cart-item-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .quantity-input {
+            width: 60px;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .cart-summary {
+            margin-top: 2rem;
+            text-align: right;
+            font-size: 1.25rem;
+            font-weight: bold;
+        }
+
+        .empty-cart {
+            text-align: center;
+            padding: 3rem;
+            color: #777;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="animated-bg"></div>
+
+    <!-- Header -->
+    <header>
+        <nav>
+            <div class="logo">Portal Productos</div>
+            <div class="nav-links">
+                <a href="/">Productos</a>
+                <a href="/chat.html" id="chatLink">Chat</a>
+                <a href="/cart.html" class="active">🛒 Carrito</a>
+                <div class="user-info compact" id="userInfo">
+                    <div class="user-avatar" id="userAvatar"></div>
+                    <div>
+                        <div id="userName"></div>
+                        <span class="role-badge" id="userRole"></span>
+                    </div>
+                    <button class="btn btn-secondary" id="logoutBtn">Cerrar Sesión</button>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div class="cart-container">
+            <h1>Mi Carrito</h1>
+            <div id="cartItems"></div>
+
+            <div class="cart-summary" id="cartSummary" style="display: none;">
+                <p>Total: <span id="cartTotal"></span></p>
+                <button class="btn btn-primary" id="checkoutBtn"
+                    style="margin-top: 1rem; font-size: 1.1rem; padding: 0.75rem 2rem;">
+                    Finalizar Compra
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Éxito Compra -->
+    <div class="modal" id="orderSuccessModal">
+        <div class="modal-content" style="text-align: center;">
+            <h2 style="color: var(--color-success); margin-bottom: 1rem;">¡Compra Realizada!</h2>
+            <p>Tu pedido ha sido procesado correctamente.</p>
+            <p style="margin: 1rem 0; font-size: 0.9rem; color: #666;" id="orderIdDisplay"></p>
+            <button class="btn btn-primary" onclick="window.location.href='/'">Seguir Comprando</button>
+        </div>
+    </div>
+
+    <script src="/graphql-client.js"></script>
+    <script src="/cart.js"></script>
+</body>
+
+</html>
