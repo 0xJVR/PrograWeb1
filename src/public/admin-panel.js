@@ -49,7 +49,7 @@ async function verifyAdminAccess() {
     });
 
     if (!response.ok) throw new Error('No autorizado');
-    
+
     const data = await response.json();
     currentUser = data.user;
 
@@ -97,7 +97,7 @@ async function loadDashboard() {
 // Mostrar usuarios recientes
 function displayRecentUsers(users) {
   const container = document.getElementById('recentUsersList');
-  
+
   if (!users || users.length === 0) {
     container.innerHTML = '<p style="text-align: center; color: #999;">No hay usuarios recientes</p>';
     return;
@@ -124,7 +124,7 @@ function displayRecentUsers(users) {
 // Mostrar productos recientes (EUR)
 function displayRecentProducts(products) {
   const container = document.getElementById('recentProductsList');
-  
+
   if (!products || products.length === 0) {
     container.innerHTML = '<p style="text-align: center; color: #999;">No hay productos recientes</p>';
     return;
@@ -237,6 +237,12 @@ function setupEventListeners() {
         document.getElementById('activityUsers').hasContent = true;
       }
     }
+    if (document.getElementById('orders-section').classList.contains('active')) {
+      if (!document.getElementById('ordersTableBody').hasContent) {
+        loadOrders();
+        document.getElementById('ordersTableBody').hasContent = true;
+      }
+    }
   });
 
   observer.observe(adminContent, { attributes: true, subtree: true });
@@ -263,6 +269,7 @@ function switchSection(sectionName) {
   // Cargar datos si es la primera vez
   if (sectionName === 'users') loadUsers();
   if (sectionName === 'products') loadProducts();
+  if (sectionName === 'orders') loadOrders();
   if (sectionName === 'activity') loadActivity();
 }
 
@@ -292,7 +299,7 @@ async function loadUsers(page = 1) {
 // Mostrar usuarios en tabla (sin inline JS, con data-* y listeners)
 function displayUsers(users) {
   const tbody = document.getElementById('usersTableBody');
-  
+
   if (!users || users.length === 0) {
     tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">No hay usuarios</td></tr>';
     return;
@@ -347,7 +354,7 @@ async function loadProducts(page = 1) {
 // Mostrar productos en tabla (EUR)
 function displayProducts(products) {
   const tbody = document.getElementById('productsTableBody');
-  
+
   if (!products || products.length === 0) {
     tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 2rem;">No hay productos</td></tr>';
     return;
@@ -389,7 +396,7 @@ async function loadActivity() {
 // Mostrar usuarios en actividad
 function displayActivityUsers(users) {
   const container = document.getElementById('activityUsers');
-  
+
   if (!users || users.length === 0) {
     container.innerHTML = '<p style="text-align: center; color: #999;">No hay actividad</p>';
     return;
@@ -410,7 +417,7 @@ function displayActivityUsers(users) {
 // Mostrar productos en actividad (EUR)
 function displayActivityProducts(products) {
   const container = document.getElementById('activityProducts');
-  
+
   if (!products || products.length === 0) {
     container.innerHTML = '<p style="text-align: center; color: #999;">No hay actividad</p>';
     return;
@@ -430,7 +437,7 @@ function displayActivityProducts(products) {
 // Mostrar mensajes en actividad
 function displayActivityMessages(messages) {
   const container = document.getElementById('activityMessages');
-  
+
   if (!messages || messages.length === 0) {
     container.innerHTML = '<p style="text-align: center; color: #999;">No hay actividad</p>';
     return;
@@ -450,7 +457,7 @@ function displayActivityMessages(messages) {
 // Mostrar paginación
 function displayPagination(pagination, containerId, callback) {
   const container = document.getElementById(containerId);
-  
+
   if (pagination.pages <= 1) {
     container.innerHTML = '';
     return;
@@ -552,9 +559,97 @@ async function handleUserDelete() {
 function showAlert(containerId, message, type) {
   const container = document.getElementById(containerId);
   if (!container) return;
-  
+
   container.innerHTML = `<div class="alert alert-${type}">${escapeHtml(message)}</div>`;
   setTimeout(() => {
     container.innerHTML = '';
   }, 5000);
 }
+
+// ----------------------
+// GESTIÓN DE PEDIDOS
+// ----------------------
+
+window.loadOrders = async function () {
+  const status = document.getElementById('orderStatusFilter').value;
+  const tbody = document.getElementById('ordersTableBody');
+
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem;">Cargando...</td></tr>';
+
+  const query = `
+    query GetOrders($status: String) {
+      orders(status: $status) {
+        id
+        user {
+          name
+          email
+        }
+        total
+        status
+        createdAt
+      }
+    }
+  `;
+
+  try {
+    const variables = status ? { status } : {};
+    const data = await graphqlRequest(query, variables);
+    displayOrders(data.orders);
+  } catch (error) {
+    console.error(error);
+    showAlert('ordersAlert', 'Error al cargar pedidos', 'error');
+  }
+};
+
+function displayOrders(orders) {
+  const tbody = document.getElementById('ordersTableBody');
+
+  if (!orders || orders.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem;">No hay pedidos</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = orders.map(order => `
+    <tr>
+      <td>${order.id}</td>
+      <td>${escapeHtml(order.user ? (order.user.name || order.user.email) : 'Usuario eliminado')}</td>
+      <td>${formatPriceEUR(order.total)}</td>
+      <td>
+        <span class="role-badge" style="background: ${order.status === 'completed' ? 'var(--color-success)' : '#f59e0b'}">
+            ${order.status === 'completed' ? 'Completado' : 'Pendiente'}
+        </span>
+      </td>
+      <td>${new Date(order.createdAt).toLocaleDateString()}</td>
+      <td>
+        ${order.status === 'pending' ? `
+            <button class="btn-small" style="background: var(--color-success); color: white;" 
+                    onclick="updateOrderStatus('${order.id}', 'completed')">
+              Marcar Completado
+            </button>
+        ` : '—'}
+      </td>
+    </tr>
+  `).join('');
+}
+
+window.updateOrderStatus = async function (orderId, status) {
+  if (!confirm('¿Cambiar estado del pedido?')) return;
+
+  const mutation = `
+    mutation SetOrderStatus($orderId: ID!, $status: String!) {
+      setOrderStatus(orderId: $orderId, status: $status) {
+        id
+        status
+      }
+    }
+  `;
+
+  try {
+    await graphqlRequest(mutation, { orderId, status });
+    loadOrders(); // Recargar lista
+    showAlert('ordersAlert', 'Estado actualizado', 'success');
+  } catch (error) {
+    console.error(error);
+    showAlert('ordersAlert', 'Error al actualizar estado', 'error');
+  }
+};

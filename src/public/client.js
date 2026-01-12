@@ -46,7 +46,7 @@ function formatPriceEUR(value) {
 
 // Inicializar aplicación (aseguramos auth antes de productos)
 document.addEventListener('DOMContentLoaded', async () => {
-  try { await checkAuthentication(); } catch {}
+  try { await checkAuthentication(); } catch { }
   await loadProducts();
   setupEventListeners();
 });
@@ -68,7 +68,7 @@ async function checkAuthentication() {
           currentUser.profileColor = data.user.profileColor;
           localStorage.setItem('user', JSON.stringify(currentUser));
         }
-      } catch {}
+      } catch { }
     }
 
     updateUIForAuthenticatedUser();
@@ -116,6 +116,7 @@ function updateUIForAuthenticatedUser() {
 
   if (logoutBtn) logoutBtn.style.display = 'block';
   if (chatLink) chatLink.style.display = 'block';
+  if (cartLink) cartLink.style.display = 'block';
 
   if (currentUser.role === 'admin' && addProductBtn) {
     addProductBtn.style.display = 'block';
@@ -129,7 +130,7 @@ function updateUIForAuthenticatedUser() {
       </div>
     `;
     welcomeMessage.style.display = 'block';
-    
+
     setTimeout(() => { welcomeMessage.style.display = 'none'; }, 3000);
   }
 }
@@ -141,11 +142,13 @@ function updateUIForGuestUser() {
   const userInfo = document.getElementById('userInfo');
   const chatLink = document.getElementById('chatLink');
   const addProductBtn = document.getElementById('addProductBtn');
+  const cartLink = document.getElementById('cartLink');
 
   if (loginLink) loginLink.style.display = 'block';
   if (registerLink) registerLink.style.display = 'block';
   if (userInfo) userInfo.style.display = 'none';
   if (chatLink) chatLink.style.display = 'none';
+  if (cartLink) cartLink.style.display = 'none';
   if (addProductBtn) addProductBtn.style.display = 'none';
 }
 
@@ -191,6 +194,14 @@ function setupEventListeners() {
       const cardImg = e.target.closest('[data-view-id]');
       if (cardImg) {
         viewProductDetail(cardImg.dataset.viewId);
+        return;
+      }
+      const addCartBtn = e.target.closest('.btn-add-cart');
+      if (addCartBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        addToCart(addCartBtn.dataset.id);
+        return;
       }
     });
   }
@@ -232,7 +243,7 @@ function logout() {
   }
 }
 
-// Cargar productos
+// Cargar productos con GraphQL
 async function loadProducts() {
   const productsGrid = document.getElementById('productsGrid');
   const loadingIndicator = document.getElementById('loadingIndicator');
@@ -241,18 +252,27 @@ async function loadProducts() {
     if (loadingIndicator) loadingIndicator.style.display = 'block';
     if (productsGrid) productsGrid.innerHTML = '';
 
-    const response = await fetch(`${API_URL}/products`);
-    const data = await response.json();
+    const query = `
+      query GetProducts {
+        products {
+          id
+          name
+          description
+          price
+          image
+        }
+      }
+    `;
 
-    if (data.success) {
-      products = data.products;
-      renderProducts(products);
-    } else {
-      showError('Error al cargar productos');
-    }
+    const data = await graphqlRequest(query);
+
+    // Adaptar respuesta GraphQL a lo que espera renderProducts (que usa _id)
+    products = data.products.map(p => ({ ...p, _id: p.id }));
+    renderProducts(products);
+
   } catch (error) {
     console.error('Error:', error);
-    showError('Error de conexión al cargar productos');
+    showError('Error al cargar productos');
   } finally {
     if (loadingIndicator) loadingIndicator.style.display = 'none';
   }
@@ -287,8 +307,13 @@ function renderProducts(productsToRender) {
         <h3 class="product-name" data-view-id="${product._id}" style="cursor:pointer;">${escapeHtml(product.name)}</h3>
         <p class="product-price">${formatPriceEUR(product.price)}</p>
         <p class="product-description">${escapeHtml(product.description)}</p>
+        
+        <button class="btn btn-primary btn-add-cart" data-id="${product._id}" style="width: 100%; margin-top: 1rem;">
+          Añadir al Carrito
+        </button>
+
         ${currentUser && currentUser.role === 'admin' ? `
-          <div class="product-actions">
+          <div class="product-actions" style="margin-top: 1rem;">
             <button class="btn btn-secondary btn-edit" data-id="${product._id}">
               Editar
             </button>
@@ -367,10 +392,10 @@ async function handleProductSubmit(e) {
   }
 
   try {
-    const url = isEditMode 
-      ? `${API_URL}/products/${currentProductId}` 
+    const url = isEditMode
+      ? `${API_URL}/products/${currentProductId}`
       : `${API_URL}/products`;
-    
+
     // Enviar SIEMPRE como FormData (así soporta actualización de imagen en PUT)
     const formEl = document.getElementById('productForm');
     const fd = new FormData(formEl);
@@ -486,4 +511,28 @@ function showSuccess(message) {
   alert.textContent = message;
   container.insertBefore(alert, container.firstChild);
   setTimeout(() => { alert.remove(); }, 5000);
+}
+
+// Añadir al carrito
+async function addToCart(productId) {
+  if (!currentUser) {
+    showError('Debes iniciar sesión para comprar');
+    return;
+  }
+
+  const mutation = `
+    mutation AddToCart($productId: ID!) {
+      addToCart(productId: $productId) {
+        total
+      }
+    }
+  `;
+
+  try {
+    await graphqlRequest(mutation, { productId });
+    showSuccess('Producto añadido al carrito');
+  } catch (error) {
+    console.error(error);
+    showError(error.message);
+  }
 }

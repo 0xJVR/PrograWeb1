@@ -57,7 +57,7 @@ async function checkAuthentication() {
           currentUser.profileColor = data.user.profileColor;
           localStorage.setItem('user', JSON.stringify(currentUser));
         }
-      } catch {}
+      } catch { }
     }
 
     updateUIForAuthenticatedUser();
@@ -99,6 +99,8 @@ function updateUIForAuthenticatedUser() {
   }
   if (logoutBtn) logoutBtn.style.display = 'block';
   if (chatLink) chatLink.style.display = 'block';
+  const cartLink = document.getElementById('cartLink');
+  if (cartLink) cartLink.style.display = 'block';
 }
 
 // Actualizar UI para usuario no autenticado
@@ -112,6 +114,9 @@ function updateUIForGuestUser() {
   if (registerLink) registerLink.style.display = 'block';
   if (userInfo) userInfo.style.display = 'none';
   if (chatLink) chatLink.style.display = 'none';
+  const cartLink = document.getElementById('cartLink');
+  if (cartLink) cartLink.style.display = 'none';
+
 }
 
 // Cerrar sesión
@@ -133,7 +138,7 @@ function getProductIdFromURL() {
 // Cargar producto desde la URL
 async function loadProductFromURL() {
   const productId = getProductIdFromURL();
-  
+
   if (!productId) {
     showError('ID de producto no especificado');
     return;
@@ -142,7 +147,7 @@ async function loadProductFromURL() {
   await loadProduct(productId);
 }
 
-// Cargar producto por ID
+// Cargar producto por ID con GraphQL
 async function loadProduct(productId) {
   const loadingIndicator = document.getElementById('loadingIndicator');
   const productContent = document.getElementById('productContent');
@@ -153,28 +158,74 @@ async function loadProduct(productId) {
     productContent.style.display = 'none';
     errorMessage.style.display = 'none';
 
-    const response = await fetch(`${API_URL}/products/${productId}`);
-    const data = await response.json();
+    const query = `
+      query GetProduct($id: ID!) {
+        product(id: $id) {
+          id
+          name
+          description
+          price
+          image
+          createdAt
+        }
+      }
+    `;
 
-    if (data.success) {
-      currentProduct = data.product;
+    const data = await graphqlRequest(query, { id: productId });
+
+    if (data.product) {
+      currentProduct = { ...data.product, _id: data.product.id }; // Compatibility map
       renderProduct(currentProduct);
-      
+
+      // Update Add to Cart Button
+      const cartContainer = document.getElementById('addToCartContainer');
+      if (cartContainer) {
+        cartContainer.innerHTML = `
+            <button class="btn btn-primary" onclick="addToCart('${currentProduct._id}')" style="width: 100%; font-size: 1.2rem; padding: 1rem;">
+                Añadir al Carrito
+            </button>
+        `;
+      }
+
       if (currentUser && currentUser.role === 'admin') {
         document.getElementById('productActions').style.display = 'flex';
       }
-      
+
       productContent.style.display = 'block';
     } else {
-      showError(data.message || 'Producto no encontrado');
+      showError('Producto no encontrado');
     }
   } catch (error) {
     console.error('Error:', error);
-    showError('Error de conexión al cargar el producto');
+    showError(error.message || 'Error de conexión al cargar el producto');
   } finally {
     loadingIndicator.style.display = 'none';
   }
 }
+
+// Global addToCart for the button onclick
+window.addToCart = async function (productId) {
+  if (!currentUser) {
+    showError('Debes iniciar sesión para comprar');
+    return;
+  }
+
+  const mutation = `
+    mutation AddToCart($productId: ID!) {
+      addToCart(productId: $productId) {
+        total
+      }
+    }
+  `;
+
+  try {
+    await graphqlRequest(mutation, { productId });
+    showSuccess('Producto añadido al carrito');
+  } catch (error) {
+    console.error(error);
+    showError(error.message);
+  }
+};
 
 // Renderizar producto
 function renderProduct(product) {
@@ -184,7 +235,7 @@ function renderProduct(product) {
   document.getElementById('productName').textContent = product.name;
   document.getElementById('productPrice').textContent = formatPriceEUR(product.price);
   document.getElementById('productDescription').textContent = product.description;
-  
+
   // Fechas del producto
   const createdAt = new Date(product.createdAt);
   document.getElementById('productCreatedAt').textContent = `Creado: ${createdAt.toLocaleDateString('es-ES', {
@@ -194,7 +245,7 @@ function renderProduct(product) {
     hour: '2-digit',
     minute: '2-digit'
   })}`;
-  
+
   if (product.updatedAt) {
     const updatedAt = new Date(product.updatedAt);
     const createdTime = new Date(product.createdAt);
@@ -286,7 +337,7 @@ function openEditProductModal() {
 function closeProductModal() {
   const modal = document.getElementById('productModal');
   const modalAlert = document.getElementById('modalAlert');
-  
+
   modal.classList.remove('show');
   document.body.classList.remove('modal-open');
   if (modalAlert) modalAlert.innerHTML = '';

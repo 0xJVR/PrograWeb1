@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/styles.css">
 </head>
+
 <body>
   <div class="animated-bg"></div>
 
@@ -22,45 +24,54 @@
   </header>
 
   <!-- Formulario de Registro -->
-  <div class="form-container">
-    <h2>Crear Cuenta</h2>
-    
-    <div id="alertContainer"></div>
-    
-    <form id="registerForm" novalidate>
-      <div class="form-group">
-        <label for="name">Nombre Completo</label>
-        <input type="text" id="name" placeholder="Juan Pérez" required>
-      </div>
+  <main class="container">
+    <div class="form-container">
+      <h2>Crear Cuenta</h2>
 
-      <div class="form-group">
-        <label for="email">Email</label>
-        <input type="email" id="email" placeholder="tu@email.com" required>
-      </div>
+      <div id="alertContainer"></div>
 
-      <div class="form-group">
-        <label for="password">Contraseña</label>
-        <input type="password" id="password" placeholder="Mínimo 6 caracteres" minlength="6" required>
-      </div>
+      <form id="registerForm" novalidate>
+        <div class="form-group">
+          <label for="name">Nombre Completo</label>
+          <input type="text" id="name" placeholder="Juan Pérez" required>
+        </div>
 
-      <div class="form-group">
-        <label for="confirmPassword">Confirmar Contraseña</label>
-        <input type="password" id="confirmPassword" placeholder="Repite tu contraseña" required>
-      </div>
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="tu@email.com" required>
+        </div>
 
-      <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
-        <span id="btnText">Registrarse</span>
-        <span id="btnLoading" style="display: none;">
-          <span class="loading"></span> Registrando...
-        </span>
-      </button>
-    </form>
+        <div class="form-group">
+          <label for="password">Contraseña</label>
+          <input type="password" id="password" placeholder="Mínimo 6 caracteres" minlength="6" required>
+        </div>
 
-    <p style="text-align: center; margin-top: 1.5rem; color: var(--color-text-muted);">
-      ¿Ya tienes cuenta? 
-      <a href="/login.html" style="color: var(--color-primary);">Inicia sesión aquí</a>
-    </p>
-  </div>
+        <div class="form-group">
+          <label for="confirmPassword">Confirmar Contraseña</label>
+          <input type="password" id="confirmPassword" placeholder="Repite tu contraseña" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+          <span id="btnText">Registrarse</span>
+          <span id="btnLoading" style="display: none;">
+            <span class="loading"></span> Registrando...
+          </span>
+        </button>
+      </form>
+
+      <p style="text-align: center; margin-top: 1.5rem; color: var(--color-text-muted);">
+        ¿Ya tienes cuenta?
+        <a href="/login.html" style="color: var(--color-primary);">Inicia sesión aquí</a>
+      </p>
+    </div>
+  </main>
+  <!-- Footer -->
+  <footer>
+    <p>&copy; Portal de Productos - Programación Web I</p>
+    <p>Javier Salmerón</p>
+  </footer>
+
   <script src="/register.js"></script>
 </body>
+
 </html>

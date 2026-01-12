@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal de Productos - Mi Carrito</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/cart.css">
+</head>
+
+<body>
+  <div class="animated-bg"></div>
+
+  <!-- Header -->
+  <header>
+    <nav>
+      <div class="logo">Portal Productos</div>
+      <div class="nav-links">
+        <a href="/">Productos</a>
+        <a href="/chat.html" id="chatLink">Chat</a>
+        <a href="/cart.html" class="active">Carrito</a>
+        <div class="user-info compact" id="userInfo" tabindex="0" aria-expanded="false">
+          <div class="user-avatar" id="userAvatar"></div>
+          <div>
+            <div id="userName"></div>
+            <span class="role-badge" id="userRole"></span>
+          </div>
+          <a href="/settings.html" class="btn btn-secondary">⚙️</a>
+          <button class="btn btn-secondary" id="logoutBtn" style="display: none;">Cerrar Sesión</button>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div class="cart-container">
+      <h1>Mi Carrito</h1>
+      <div id="cartItems"></div>
+
+      <div class="cart-summary" id="cartSummary" style="display: none;">
+        <p>Total: <span id="cartTotal"></span></p>
+        <button class="btn btn-primary" id="checkoutBtn"
+          style="margin-top: 1rem; font-size: 1.1rem; padding: 0.75rem 2rem;">
+          Finalizar Compra
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal Éxito Compra -->
+  <div class="modal" id="orderSuccessModal">
+    <div class="modal-content" style="text-align: center;">
+      <h2 style="color: var(--color-success); margin-bottom: 1rem;">¡Compra Realizada!</h2>
+      <p>Tu pedido ha sido procesado correctamente.</p>
+      <p style="margin: 1rem 0; font-size: 0.9rem; color: #666;" id="orderIdDisplay"></p>
+      <button class="btn btn-primary" onclick="window.location.href='/'">Seguir Comprando</button>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>&copy; Portal de Productos - Programación Web I</p>
+    <p>Javier Salmerón</p>
+  </footer>
+
+  <script src="/graphql-client.js"></script>
+  <script src="/cart.js"></script>
+</body>
+
+</html>

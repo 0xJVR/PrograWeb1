@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/styles.css">
 </head>
+
 <body>
   <div class="animated-bg"></div>
 
@@ -19,6 +21,7 @@
         <a href="/chat.html" id="chatLink" style="display: none;">Chat</a>
         <a href="/login.html" id="loginLink">Iniciar Sesión</a>
         <a href="/register.html" id="registerLink">Registrarse</a>
+        <a href="/cart.html" id="cartLink" style="display: none;">Carrito</a>
         <div class="user-info compact" id="userInfo" style="display: none;" tabindex="0" aria-expanded="false">
           <div class="user-avatar" id="userAvatar"></div>
           <div>
@@ -64,12 +67,12 @@
         <h3 id="modalTitle">Agregar Producto</h3>
         <button class="close-modal" id="closeModal">&times;</button>
       </div>
-      
+
       <div id="modalAlert"></div>
-      
+
       <form id="productForm" enctype="multipart/form-data">
         <input type="hidden" id="productId" name="id">
-        
+
         <div class="form-group">
           <label for="productName">Nombre del Producto</label>
           <input type="text" id="productName" name="name" required>
@@ -89,7 +92,8 @@
           <label for="productImage">Imagen del Producto</label>
           <input type="file" id="productImage" name="image" accept="image/*">
           <div id="imagePreview" style="margin-top: 1rem; display: none;">
-            <img id="previewImage" src="" alt="Vista previa" style="max-width: 200px; max-height: 200px; border-radius: 8px;">
+            <img id="previewImage" src="" alt="Vista previa"
+              style="max-width: 200px; max-height: 200px; border-radius: 8px;">
           </div>
         </div>
 
@@ -111,6 +115,8 @@
     <p>Javier Salmerón</p>
   </footer>
 
+  <script src="/graphql-client.js"></script>
   <script src="/client.js"></script>
 </body>
+
 </html>
