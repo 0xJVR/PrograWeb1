@@ -18,7 +18,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     if (user.email) {
         document.getElementById('userName').textContent = user.name || user.email.split('@')[0];
-        document.getElementById('userRole').textContent = user.role;
+        const userRoleEl = document.getElementById('userRole');
+        userRoleEl.textContent = user.role;
+        userRoleEl.className = `role-badge ${user.role || 'user'}`;
         document.getElementById('userAvatar').textContent = (user.name || user.email)[0].toUpperCase();
         // Background color
         const gradients = [
@@ -32,6 +34,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             'linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%)'
         ];
         document.getElementById('userAvatar').style.background = gradients[user.profileColor || 0];
+        // Show logout button
+        document.getElementById('logoutBtn').style.display = 'block';
     }
 
     document.getElementById('logoutBtn').addEventListener('click', () => {

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,6 +9,7 @@
   <link rel="stylesheet" href="/styles.css" />
   <link rel="stylesheet" href="/chat.css" />
 </head>
+
 <body>
   <div class="animated-bg"></div>
 
@@ -56,7 +58,8 @@
           </div>
         </div>
 
-        <div class="chat-messages" id="chatMessages" style="display: none;" role="log" aria-live="polite" aria-relevant="additions">
+        <div class="chat-messages" id="chatMessages" style="display: none;" role="log" aria-live="polite"
+          aria-relevant="additions">
           <!-- Los mensajes se cargarán aquí -->
         </div>
 
@@ -64,20 +67,14 @@
           <p>Selecciona una conversación para comenzar a chatear</p>
         </div>
 
-        <div id="typingIndicator" class="typing-indicator" style="display: none; margin: 0 1.5rem 1rem;" aria-live="polite">
+        <div id="typingIndicator" class="typing-indicator" style="display: none; margin: 0 1.5rem 1rem;"
+          aria-live="polite">
           <span id="typingUser"></span> está escribiendo...
         </div>
 
         <div class="chat-input-container" id="chatInputContainer" style="display: none;">
-          <input
-            type="text"
-            class="chat-input"
-            id="messageInput"
-            placeholder="Escribe un mensaje..."
-            maxlength="1000"
-            autocomplete="off"
-            aria-label="Escribe un mensaje"
-          />
+          <input type="text" class="chat-input" id="messageInput" placeholder="Escribe un mensaje..." maxlength="1000"
+            autocomplete="off" aria-label="Escribe un mensaje" />
           <button class="btn btn-primary" id="sendBtn" type="button">
             Enviar
           </button>
@@ -87,7 +84,8 @@
   </div>
 
   <!-- Modal para nueva conversación -->
-  <div class="modal" id="newConversationModal" role="dialog" aria-modal="true" aria-labelledby="newConversationTitle" tabindex="-1">
+  <div class="modal" id="newConversationModal" role="dialog" aria-modal="true" aria-labelledby="newConversationTitle"
+    tabindex="-1">
     <div class="modal-content" role="document">
       <div class="modal-header">
         <h3 id="newConversationTitle">Nueva Conversación</h3>
@@ -111,9 +109,16 @@
     </div>
   </div>
 
+  <!-- Footer -->
+  <footer>
+    <p>&copy; Portal de Productos - Programación Web I</p>
+    <p>Javier Salmerón</p>
+  </footer>
+
   <!-- Socket.IO Client -->
   <script src="/socket.io/socket.io.js"></script>
 
   <script src="/chat.js"></script>
 </body>
+
 </html>

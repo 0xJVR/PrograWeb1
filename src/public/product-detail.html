@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +9,7 @@
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/product-detail.css">
 </head>
+
 <body>
   <div class="animated-bg"></div>
 
@@ -20,6 +22,7 @@
         <a href="/chat.html" id="chatLink" style="display: none;">Chat</a>
         <a href="/login.html" id="loginLink">Iniciar Sesión</a>
         <a href="/register.html" id="registerLink">Registrarse</a>
+        <a href="/cart.html" id="cartLink" style="display: none;">Carrito</a>
         <div class="user-info compact" id="userInfo" style="display: none;" tabindex="0" aria-expanded="false">
           <div class="user-avatar" id="userAvatar"></div>
           <div>
@@ -58,19 +61,18 @@
 
       <div class="product-detail-card">
         <div class="product-detail-image-container">
-          <img 
-            id="productImage" 
-            src="" 
-            alt="" 
-            class="product-detail-image"
-          >
+          <img id="productImage" src="" alt="" class="product-detail-image">
         </div>
-        
+
         <div class="product-detail-info">
           <h1 id="productName" class="product-detail-name"></h1>
           <p id="productPrice" class="product-detail-price"></p>
           <p id="productDescription" class="product-detail-description"></p>
-          
+
+          <div id="addToCartContainer" style="margin: 2rem 0;">
+            <!-- Button injected by JS -->
+          </div>
+
           <div class="product-detail-meta">
             <small id="productCreatedAt"></small>
             <small id="productUpdatedAt" style="display: none;"></small>
@@ -90,12 +92,12 @@
         <h3 id="modalTitle">Editar Producto</h3>
         <button class="close-modal" id="closeModal">&times;</button>
       </div>
-      
+
       <div id="modalAlert"></div>
-      
+
       <form id="productForm" enctype="multipart/form-data">
         <input type="hidden" id="productId" name="id">
-        
+
         <div class="form-group">
           <label for="modalProductName">Nombre del Producto</label>
           <input type="text" id="modalProductName" name="name" required>
@@ -115,7 +117,8 @@
           <label for="modalProductImage">Imagen del Producto</label>
           <input type="file" id="modalProductImage" name="image" accept="image/*">
           <div id="modalImagePreview" style="margin-top: 1rem; display: none;">
-            <img id="modalPreviewImage" src="" alt="Vista previa" style="max-width: 200px; max-height: 200px; border-radius: 8px;">
+            <img id="modalPreviewImage" src="" alt="Vista previa"
+              style="max-width: 200px; max-height: 200px; border-radius: 8px;">
           </div>
         </div>
 
@@ -137,6 +140,8 @@
     <p>Javier Salmerón</p>
   </footer>
 
+  <script src="/graphql-client.js"></script>
   <script src="/product-detail.js"></script>
 </body>
+
 </html>
