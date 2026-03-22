@@ -61,6 +61,7 @@ const seedData = async () => {
         description:
           'Laptop de alto rendimiento con procesador Intel i9, 32GB RAM y RTX 4070. Perfecta para gaming y trabajo profesional.',
         image: '/uploads/product_1762724206816.webp',
+        active: true,
         createdBy: adminUserId,
         createdAt: new Date('2025-11-03T16:21:59.139Z'),
         updatedAt: new Date('2025-11-09T21:36:46.819Z'),
@@ -72,6 +73,7 @@ const seedData = async () => {
         description:
           'Teléfono inteligente con pantalla AMOLED 6.7, cámara de 108MP y batería de 5000mAh. Tecnología 5G incluida.',
         image: '/uploads/product_1762724322608.webp',
+        active: true,
         createdBy: adminUserId,
         createdAt: new Date('2025-11-03T16:21:59.139Z'),
         updatedAt: new Date('2025-11-09T21:38:51.129Z'),
@@ -83,6 +85,7 @@ const seedData = async () => {
         description:
           'Auriculares inalámbricos con cancelación de ruido activa, 30 horas de batería y sonido de alta fidelidad.',
         image: '/uploads/product_1762724275617.webp',
+        active: false,
         createdBy: adminUserId,
         createdAt: new Date('2025-11-03T16:21:59.140Z'),
         updatedAt: new Date('2025-11-09T21:37:55.619Z'),
@@ -94,6 +97,7 @@ const seedData = async () => {
         description:
           'Reloj inteligente con monitor de salud, GPS integrado y resistencia al agua hasta 50m.',
         image: '/uploads/product_1762723656034.webp',
+        active: true,
         createdBy: adminUserId,
         createdAt: new Date('2025-11-03T16:21:59.141Z'),
         updatedAt: new Date('2025-11-09T21:35:09.882Z'),
@@ -105,6 +109,7 @@ const seedData = async () => {
         description:
           'Tablet profesional con pantalla de 12 pulgadas, stylus incluido y procesador de última generación.',
         image: '/uploads/product_1762724050865.webp',
+        active: true,
         createdBy: adminUserId,
         createdAt: new Date('2025-11-03T16:21:59.141Z'),
         updatedAt: new Date('2025-11-09T21:35:23.890Z'),
@@ -116,6 +121,7 @@ const seedData = async () => {
         description:
           'Cámara profesional con grabación 4K 60fps, estabilización de imagen y lentes intercambiables.',
         image: '/uploads/product_1762724074970.webp',
+        active: true,
         createdBy: adminUserId,
         createdAt: new Date('2025-11-03T16:21:59.141Z'),
         updatedAt: new Date('2025-11-09T21:34:34.972Z'),
@@ -127,6 +133,7 @@ const seedData = async () => {
         description:
           'Teclado mecánico para gaming con switches Cherry MX, iluminación RGB personalizable y reposamuñecas.',
         image: '/uploads/product_1762724094742.webp',
+        active: true,
         createdBy: adminUserId,
         createdAt: new Date('2025-11-03T16:21:59.141Z'),
         updatedAt: new Date('2025-11-09T21:34:54.745Z'),
@@ -138,6 +145,7 @@ const seedData = async () => {
         description:
           'Mouse gaming con sensor óptico de 25,000 DPI, 11 botones programables y batería de 100 horas.',
         image: '/uploads/product_1762723600581.webp',
+        active: false,
         createdBy: adminUserId,
         createdAt: new Date('2025-11-03T16:21:59.142Z'),
         updatedAt: new Date('2025-11-09T21:26:40.591Z'),
@@ -149,6 +157,7 @@ const seedData = async () => {
         description:
           'Monitor ultra wide curvo con resolución QHD, 144Hz y tecnología HDR para experiencia inmersiva.',
         image: '/uploads/product_1762723637312.webp',
+        active: true,
         createdBy: adminUserId,
         createdAt: new Date('2025-11-03T16:21:59.142Z'),
         updatedAt: new Date('2025-11-09T21:35:16.935Z'),

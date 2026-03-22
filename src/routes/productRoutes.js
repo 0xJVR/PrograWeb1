@@ -130,11 +130,14 @@ router.post('/', authenticateJWT, requireAdmin, handleFileUpload, async (req, re
       });
     }
 
+    const active = req.body.active !== undefined ? req.body.active !== 'false' && req.body.active !== false : true;
+
     const product = new Product({
       name: sanitizeString(name),
       price,
       description: sanitizeString(description),
-      image: image || '', // puede ser '' si no se subió
+      image: image || '',
+      active,
       createdBy: req.user.id
     });
 
@@ -198,6 +201,10 @@ router.put('/:id', authenticateJWT, requireAdmin, handleFileUpload, async (req, 
         });
       }
       product.image = image; // vacío '' para eliminar, o nueva ruta/url
+    }
+
+    if (req.body.active !== undefined) {
+      product.active = req.body.active !== 'false' && req.body.active !== false;
     }
 
     await product.save();

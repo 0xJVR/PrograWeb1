@@ -22,6 +22,10 @@ const productSchema = new mongoose.Schema({
     trim: true,
     default: ''
   },
+  active: {
+    type: Boolean,
+    default: true
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

@@ -113,6 +113,60 @@ router.get('/users', authenticateJWT, requireAdmin, async (req, res) => {
 });
 
 /**
+ * POST /api/admin/users
+ * Crear usuario desde panel admin
+ */
+router.post('/users', authenticateJWT, requireAdmin, async (req, res) => {
+  try {
+    const { name, email, password, role } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nombre, email y contraseña son obligatorios'
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'La contraseña debe tener al menos 6 caracteres'
+      });
+    }
+
+    const existing = await User.findOne({ email: email.toLowerCase() });
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ya existe un usuario con ese email'
+      });
+    }
+
+    const user = new User({
+      name,
+      email: email.toLowerCase(),
+      password,
+      role: role && ['user', 'admin'].includes(role) ? role : 'user'
+    });
+
+    await user.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Usuario creado exitosamente',
+      user: user.toJSON()
+    });
+  } catch (error) {
+    console.error('Error al crear usuario:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al crear usuario',
+      error: error.message
+    });
+  }
+});
+
+/**
  * PUT /api/admin/users/:id
  * Actualizar usuario
  */
