@@ -72,3 +72,18 @@ a datos necesarias para los siguientes servicios.
 **Decisión:** Acepté SQLite porque es suficiente para la práctica y mantiene la
 puesta en marcha sencilla. Conservé el acceso a datos dentro de repositorios
 para evitar consultas directas desde routers o services.
+
+## Schemas Pydantic y errores de API
+
+**Prompt:** Añade schemas Pydantic v2 para autenticación, usuarios y productos.
+Valida campos obligatorios, tipos, longitudes, formatos y rangos. Implementa un
+manejo global de excepciones con respuestas limpias y consistentes para
+recursos no encontrados, autenticación, autorización, validación, lógica de
+negocio y errores de base de datos.
+
+**Resultado:** Se crearon los schemas de entrada y salida, un schema común para
+mensajes y las excepciones de la aplicación con sus handlers HTTP.
+
+**Decisión:** Acepté separar los schemas de los modelos ORM para no mezclar
+persistencia con contrato de API. Mantuve errores estructurados y sin trazas
+internas para que el frontend reciba respuestas predecibles.
