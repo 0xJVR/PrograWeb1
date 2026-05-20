@@ -57,3 +57,18 @@ del backend.
 dependencias. Dejé la persistencia, los schemas, la autenticación y las rutas
 para peticiones posteriores, de forma que cada bloque pudiera contrastarse con
 la documentación y revisarse por separado.
+
+## Persistencia con SQLite y SQLAlchemy
+
+**Prompt:** Implementa persistencia real con SQLite y SQLAlchemy 2.0. Crea una
+sesión de base de datos por petición, modelos ORM para usuarios y productos y
+repositorios que centralicen todas las consultas. No uses arrays en memoria,
+archivos JSON ni persistencia simulada.
+
+**Resultado:** Se añadieron la base declarativa, la configuración de sesión,
+los modelos `User` y `Product` y sus repositorios con las operaciones de acceso
+a datos necesarias para los siguientes servicios.
+
+**Decisión:** Acepté SQLite porque es suficiente para la práctica y mantiene la
+puesta en marcha sencilla. Conservé el acceso a datos dentro de repositorios
+para evitar consultas directas desde routers o services.
