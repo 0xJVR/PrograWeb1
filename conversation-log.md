@@ -103,3 +103,18 @@ y exigir roles, y el router de login.
 **Decisión:** Acepté centralizar la seguridad en `core` y la lógica de login en
 un service. Mantuve las comprobaciones de autenticación y autorización como
 dependencias reutilizables para que las rutas no dupliquen lógica.
+
+## CRUD de productos
+
+**Prompt:** Implementa el CRUD completo de productos respetando las URLs,
+métodos HTTP, campos JSON y estructuras de respuesta consumidas por el
+frontend. Los routers solo deben gestionar HTTP y delegar la lógica de negocio
+en services. Reutiliza la autenticación y aplica permisos cuando corresponda.
+
+**Resultado:** Se añadieron el router de productos, los parsers de peticiones y
+el servicio con las operaciones de listado, consulta, creación, edición y
+eliminación de productos.
+
+**Decisión:** Acepté mantener el parsing compatible con el frontend existente y
+separarlo del servicio. Conservé la lógica de negocio fuera del router para
+respetar la arquitectura definida al inicio.
