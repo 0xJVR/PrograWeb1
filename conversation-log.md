@@ -87,3 +87,19 @@ mensajes y las excepciones de la aplicación con sus handlers HTTP.
 **Decisión:** Acepté separar los schemas de los modelos ORM para no mezclar
 persistencia con contrato de API. Mantuve errores estructurados y sin trazas
 internas para que el frontend reciba respuestas predecibles.
+
+## Autenticación JWT y roles
+
+**Prompt:** Implementa autenticación JWT con expiración y hash seguro de
+contraseñas. Permite el login con el contrato esperado por el frontend, valida
+el token en las rutas privadas y distingue los roles `user` y `admin`. Devuelve
+`401 Unauthorized` para credenciales o tokens inválidos y `403 Forbidden`
+cuando falten permisos.
+
+**Resultado:** Se añadieron las utilidades de seguridad, el servicio de
+autenticación, los serializers, las dependencias para obtener el usuario actual
+y exigir roles, y el router de login.
+
+**Decisión:** Acepté centralizar la seguridad en `core` y la lógica de login en
+un service. Mantuve las comprobaciones de autenticación y autorización como
+dependencias reutilizables para que las rutas no dupliquen lógica.
