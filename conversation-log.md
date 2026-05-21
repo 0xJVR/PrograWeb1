@@ -118,3 +118,19 @@ eliminación de productos.
 **Decisión:** Acepté mantener el parsing compatible con el frontend existente y
 separarlo del servicio. Conservé la lógica de negocio fuera del router para
 respetar la arquitectura definida al inicio.
+
+## APIs de usuarios y administración
+
+**Prompt:** Implementa el CRUD completo de usuarios y las operaciones de
+administración. Mantén la compatibilidad con el frontend y aplica autorización
+por rol: un usuario autenticado debe acceder únicamente a las operaciones
+permitidas y las acciones administrativas deben exigir `admin`.
+
+**Resultado:** Se añadieron los routers de usuarios y administración y el
+servicio de usuarios con su lógica de consulta, creación, actualización y
+borrado.
+
+**Decisión:** Acepté separar las rutas administrativas de las rutas de usuario
+para que los permisos sean visibles y fáciles de revisar. Reutilicé las
+dependencias de rol existentes en lugar de introducir comprobaciones manuales
+en cada endpoint.
