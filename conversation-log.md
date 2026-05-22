@@ -134,3 +134,18 @@ borrado.
 para que los permisos sean visibles y fáciles de revisar. Reutilicé las
 dependencias de rol existentes en lugar de introducir comprobaciones manuales
 en cada endpoint.
+
+## Arranque de la aplicación y datos iniciales
+
+**Prompt:** Conecta todos los módulos en la aplicación FastAPI. Registra los
+routers, configura los handlers globales de excepciones, inicializa la base de
+datos e incluye los datos mínimos de prueba necesarios para ejecutar el
+proyecto y comprobar el login y los roles.
+
+**Resultado:** Se añadió `main.py` con la configuración de la aplicación y el
+registro de rutas y handlers. También se creó la inicialización de la base de
+datos con datos semilla.
+
+**Decisión:** Acepté una inicialización sencilla y reproducible para facilitar
+la evaluación local. Mantuve `main.py` limitado al ensamblado de componentes,
+sin trasladar allí lógica de negocio.
