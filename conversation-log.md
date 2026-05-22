@@ -149,3 +149,18 @@ datos con datos semilla.
 **Decisión:** Acepté una inicialización sencilla y reproducible para facilitar
 la evaluación local. Mantuve `main.py` limitado al ensamblado de componentes,
 sin trasladar allí lógica de negocio.
+
+## Documentación final del backend
+
+**Prompt:** Actualiza el README principal con la entrega final. Incluye
+instrucciones de instalación y ejecución, inicialización de la base de datos,
+credenciales de prueba, endpoints principales, permisos por rol y una
+explicación breve de la arquitectura usada.
+
+**Resultado:** Se sustituyó la documentación anterior por un README centrado en
+el backend FastAPI implementado, con instrucciones de puesta en marcha y
+referencia de uso.
+
+**Decisión:** Acepté cerrar la migración con documentación orientada a ejecutar
+y revisar la práctica. Conservé el detalle necesario para entender la
+arquitectura y probar los endpoints sin añadir cambios funcionales al código.
