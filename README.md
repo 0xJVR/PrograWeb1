@@ -2,6 +2,19 @@
 
 Backend Python para el portal de productos. Sustituye el servidor Express manteniendo las rutas REST que consume el frontend Svelte.
 
+## Configuración
+
+Desde la raíz del repositorio:
+
+```bash
+cp .env.example .env
+```
+
+Edita `.env` antes de arrancar el backend. FastAPI carga automáticamente ese
+archivo desde la raíz del proyecto. Como mínimo, sustituye `JWT_SECRET` por una
+clave larga y segura. El archivo `.env` está ignorado por Git para evitar
+versionar secretos.
+
 ## Instalación
 
 ```bash
@@ -9,14 +22,6 @@ cd backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-```
-
-Variables opcionales:
-
-```bash
-export DATABASE_URL="sqlite:///./app.db"
-export JWT_SECRET="una-clave-larga-y-segura"
-export JWT_EXPIRE_MINUTES=1440
 ```
 
 ## Ejecución

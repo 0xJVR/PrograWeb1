@@ -1,10 +1,16 @@
 from functools import lru_cache
-from pathlib import Path
 from os import getenv
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+load_dotenv(PROJECT_ROOT / ".env")
 
 
 class Settings:
-    project_root: Path = Path(__file__).resolve().parents[3]
+    project_root: Path = PROJECT_ROOT
     app_name: str = "Portal Productos API"
     api_prefix: str = "/api"
     database_url: str = getenv(

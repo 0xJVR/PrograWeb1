@@ -164,3 +164,24 @@ referencia de uso.
 **Decisión:** Acepté cerrar la migración con documentación orientada a ejecutar
 y revisar la práctica. Conservé el detalle necesario para entender la
 arquitectura y probar los endpoints sin añadir cambios funcionales al código.
+
+## Configuración local mediante archivo .env
+
+**Prompt:** Simplifica la configuración local del backend FastAPI sustituyendo
+la necesidad de exportar variables manualmente en cada sesión por la carga
+automática de un archivo `.env`. Mantén la posibilidad de sobrescribir valores
+desde el entorno del sistema para facilitar futuros despliegues, proporciona un
+archivo de ejemplo sin secretos reales y actualiza las instrucciones de puesta
+en marcha.
+
+**Resultado:** Se añadió `python-dotenv`, se configuró la carga explícita del
+archivo `.env` ubicado en la raíz del proyecto y se ampliaron las variables de
+ejemplo necesarias para el backend FastAPI. Se eliminaron del ejemplo las
+variables residuales del servidor Express y MongoDB anterior. Los README
+indican ahora cómo crear el archivo local desde la raíz del repositorio a
+partir de `.env.example`.
+
+**Decisión:** Acepté centralizar la configuración local en `.env` para evitar
+exports repetitivos. Mantuve el archivo real fuera del repositorio mediante
+`.gitignore`, retiré ajustes que FastAPI no consume y conservé la prioridad de
+las variables del sistema para no limitar la configuración de despliegue.
