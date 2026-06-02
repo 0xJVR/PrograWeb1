@@ -2,345 +2,454 @@
 
 [Repositorio del proyecto](https://github.com/0xJVR/PrograWeb1)
 
-Proyecto Node.js para un portal de productos, con autenticación JWT, panel de administración, chat en tiempo real con Socket.IO y gestión de usuarios/productos sobre MongoDB. La interfaz web es una SPA servida estáticamente desde Express y programada con JavaScript.
+Portal de productos con frontend SPA en Svelte 5 y backend REST en Python.
+El backend anterior basado en Express y MongoDB ha sido sustituido por una API
+FastAPI con persistencia SQLite, SQLAlchemy 2.0, validación Pydantic v2,
+autenticación JWT y control de acceso por roles.
 
-**Actualización E-commerce (Práctica 2):** Incorpora carrito de compras, gestión de pedidos y API GraphQL.
+La migración mantiene el contrato HTTP utilizado por el frontend: las mismas
+rutas principales, los mismos métodos y estructuras JSON compatibles con los
+componentes Svelte existentes.
 
-## Prueba en producción:
+## Memoria del uso de Inteligencia Artificial
 
-La applicación se encuentra online para realizar pruebas en [https://pw.salme.dev](https://pw.salme.dev)
+El proceso de apoyo mediante Inteligencia Artificial utilizado durante el
+desarrollo se encuentra documentado en la
+[memoria de conversación](./conversation-log.md).
 
 ---
 
 ## Contenido
 
+- [Memoria del uso de Inteligencia Artificial](#memoria-del-uso-de-inteligencia-artificial)
 - [Requisitos y puesta en marcha](#requisitos-y-puesta-en-marcha)
-- [Descripción de archivos](#descripción-de-archivos-de-proyecto)
-- [API](#api-resumen)
+- [Configuración](#configuración)
+- [Estructura del proyecto](#estructura-del-proyecto)
+- [Arquitectura del backend](#arquitectura-del-backend)
+- [API REST](#api-rest)
 - [Credenciales de ejemplo](#credenciales-de-ejemplo)
-- [Decisiones de diseño y consideraciones técnicas](#decisiones-de-diseño-y-consideraciones-técnicas)
+- [Compatibilidad con el frontend Svelte](#compatibilidad-con-el-frontend-svelte)
+- [Decisiones de diseño](#decisiones-de-diseño)
 - [Dependencias y por qué se usan](#dependencias-y-por-qué-se-usan)
 - [Seguridad, validación y límites](#seguridad-validación-y-límites)
-- [Notas de despliegue](#notas-de-despliegue)
+- [Notas de desarrollo](#notas-de-desarrollo)
 
 ---
 
 ## Requisitos y puesta en marcha
 
 ### Requisitos previos
-- Node.js
-- MongoDB
 
-### Variables de entorno
-Crear archivo .env utilizando como base .env.example
+- Python 3.10 o superior.
+- Node.js 18 o superior para ejecutar el frontend.
+- Git con soporte para submódulos.
+
+No es necesario instalar un servidor de base de datos externo. SQLite almacena
+los datos localmente en `backend/app.db`.
+
+### Obtener el frontend
+
+El frontend Svelte se mantiene como submódulo del repositorio:
 
 ```bash
-PORT=3000
-MONGODB_URI=mongodb://localhost:27017/portal-productos
-JWT_SECRET=una_clave_segura_y_larga
-NODE_ENV=development
+git submodule update --init --recursive
 ```
 
 ### Inicio rápido
 
-**Opción A - automatizado**  
-El proyecto incluye un `start.sh` que automatiza:
-1) la instalación de dependencias,  
-2) la carga de datos de ejemplo en MongoDB
-3) el arranque del servidor.
+Desde la raíz del repositorio:
 
 ```bash
-chmod +x start.sh
-./start.sh
+# 1. Crear la configuración local
+cp .env.example .env
+
+# 2. Preparar el backend
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# 3. Arrancar la API
+uvicorn app.main:app --reload --host 0.0.0.0 --port 3000
 ```
 
-**Opción B - manual**
+En otra terminal, desde la raíz del repositorio:
+
 ```bash
-# 1) Instalar dependencias
+cd frontend
 npm install
-
-# 2) Cargar datos de ejemplo
-node src/scripts/seedDatabase.js
-
-# 3) Arrancar el servidor
-node src/server.js
+npm run dev
 ```
 
-Los datos de ejemplo también pueden inicializarse directamente con `src/scripts/seedDatabase.js`.
+Servicios disponibles durante el desarrollo:
+
+| Servicio | URL |
+| --- | --- |
+| Backend FastAPI | `http://localhost:3000` |
+| Documentación Swagger | `http://localhost:3000/docs` |
+| Documentación ReDoc | `http://localhost:3000/redoc` |
+| Frontend Svelte | `http://localhost:5173` |
+
+La base de datos y los datos mínimos de prueba se crean automáticamente al
+arrancar FastAPI por primera vez.
 
 ---
 
-## Descripción de archivos de proyecto
+## Configuración
 
-### Backend
+El backend carga automáticamente el archivo `.env` situado en la raíz del
+proyecto mediante `python-dotenv`. El archivo real está ignorado por Git para
+evitar versionar secretos.
 
-- **`src/server.js`**  
-  Servidor principal: Express + HTTP + Socket.IO.  
-  - Carga middlewares (Helmet, CORS, parsers, `express-fileupload`, rate limiting).  
-  - Sirve estáticos desde `public/`.  
-  - Registra rutas API (`/api/auth`, `/api/products`, `/api/chat`, `/api/users`, `/api/admin`).  
-  - Conecta a MongoDB con Mongoose.  
-  - Configura autenticación de Socket.IO mediante JWT en el handshake.  
-  - Gestiona asignación de administrador a usuarios en el chat, eventos de mensajes, “typing”, y lista de conversaciones.  
-  - Aplica manejadores de error 404 y global.
+Crea la configuración local a partir del ejemplo:
 
-- **`src/config.js`**  
-  Centraliza configuración leída de `.env` (PORT, MONGODB_URI, JWT_SECRET, JWT exp) y `NODE_ENV`.
+```bash
+cp .env.example .env
+```
 
-- **`src/scripts/seedDatabase.js`**  
-  Script de inicialización de base de datos:
-  - Conecta a MongoDB, limpia colecciones `users`, `products`, `messages`.  
-  - Crea un admin y un usuario con IDs fijos (contraseñas se hashean vía hook Mongoose).  
-  - Inserta productos de ejemplo y un breve historial de mensajes.
+Variables disponibles:
 
-- **Modelos (`src/models/*.js`)**
-  - **`User.js`**: esquema de Usuario con `name`, `email`, `password` (hash `bcrypt`), `role` (`user|admin`), `profileColor`, `createdAt`. Hooks para hashear contraseña y método `comparePassword`. Oculta `password` en `toJSON`.
-  - **`Product.js`**: esquema de Producto (`name`, `price`, `description`, `image`, `createdBy`, `createdAt`, `updatedAt`). Hook `pre('save')` para mantener `updatedAt`.
-  - **`Message.js`**: mensajes de chat con `sender`, `senderName`, `recipient`, `content`, `timestamp`, `conversationType`, `conversationId`. Índices para consultas por conversación y fecha.
-  - **`Order.js`**: Pedidos de e-commerce con `user`, `items` (snapshot de productos), `total`, `status` (`pending`, `completed`) y `createdAt`.
+```dotenv
+JWT_SECRET=tu_clave_secreta_super_segura_cambiala
+DATABASE_URL=sqlite:///./app.db
+JWT_ALGORITHM=HS256
+JWT_EXPIRE_MINUTES=1440
+```
 
-- **Rutas (`src/routes/*.js`)**
-  - **`authRoutes.js`**: registro, login y verificación de token. Devuelve JWT y datos básicos del usuario.
-  - **`productRoutes.js`**: CRUD de productos.  
-    - Público: listar y obtener detalle.  
-    - Admin: crear/editar/eliminar, subida de imagen con `express-fileupload` (validación mimetype/tamaño).  
-    - Sanitiza entradas y valida con utilidades.
-  - **`chatRoutes.js`**: endpoints HTTP complementarios al chat (listar conversaciones, obtener mensajes, iniciar conversación, limpiar historial -solo admin-).
-  - **`userRoutes.js`**: perfil del usuario autenticado (obtener/actualizar nombre), cambio de contraseña, cambio de color de perfil, eliminación de cuenta. `GET /api/users` solo para admins (listado).
-  - **`adminRoutes.js`**: endpoints para panel admin: estadísticas, listado/paginación de usuarios y productos, actividad reciente, actualización/eliminación de usuarios.
+| Variable | Descripción |
+| --- | --- |
+| `JWT_SECRET` | Clave utilizada para firmar y verificar tokens JWT. Debe sustituirse por un valor largo y seguro. |
+| `DATABASE_URL` | URL de conexión SQLAlchemy. El valor de ejemplo crea `backend/app.db` al ejecutar Uvicorn desde `backend/`. |
+| `JWT_ALGORITHM` | Algoritmo de firma JWT. Por defecto: `HS256`. |
+| `JWT_EXPIRE_MINUTES` | Duración del token de acceso en minutos. Por defecto: `1440` (24 horas). |
+| `UPLOAD_DIR` | Opcional. Directorio de imágenes subidas. Por defecto: `backend/app/static/uploads`. |
 
-- **Middlewares (`src/middleware/*.js`)**
-  - **`authenticateJWT.js`**: valida `Authorization: Bearer <token>`, anexa `req.user` y provee `requireAdmin`.
-  - **`errorHandler.js`**: 404, manejador global de errores con logging, y wrapper `asyncHandler`.
-  - **`rateLimiter.js`**: limitador simple en memoria por IP con ventanas configurables. Incluye tres instancias: general, auth e API.
-
-- **Utilidades (`src/utils/*.js`)**
-  - **`logger.js`**: logging coloreado para distintos niveles.
-  - **`validators.js`**: validación de email, contraseña, producto, URL y sanitización básica de strings para evitar XSS.
-
-### Frontend (estático, servido desde `public/`)
-
-- **`index.html` / `client.js`**  
-  Página principal con grid de productos.  
-  - Carga productos vía `/api/products`.  
-  - Maneja autenticación desde `localStorage` (token y usuario).  
-  - Si el usuario es admin, permite crear/editar/eliminar productos (modal con `FormData` para soportar imagen).  
-  - Helpers de formato (EUR), escape anti-XSS, vista previa de imagen.
-
-- **`product-detail.html` / `product-detail.js`**  
-  Vista de detalle de producto (`/product-detail.html?id=...`).  
-  - Carga el producto y, para admin, permite edición/eliminación con modal.
-
-- **`login.html` / `login.js`**  
-  Formulario de acceso. Envía a `/api/auth/login`, guarda token/usuario en `localStorage`, redirige al inicio.
-
-- **`register.html` / `register.js`**  
-  Registro de usuarios. Valida coincidencia de contraseñas y envía a `/api/auth/register`.
-
-- **`settings.html` / `settings.js`**  
-  Configuración de perfil:  
-  - Cambiar nombre.  
-  - Seleccionar uno de 8 gradientes de avatar (`profileColor`).  
-  - Cambiar contraseña.  
-  - Eliminar cuenta (pide contraseña).  
-  - Muestra enlace al panel admin si el rol es `admin`.
-
-- **`chat.html` / `chat.js`**  
-  Chat en tiempo real con Socket.IO:  
-  - Autenticación del socket con el JWT.  
-  - Asignación automática de admin a usuarios.  
-  - Lista de conversaciones para administradores, indicador “está escribiendo”, historial, y envío de mensajes.  
-  - Manejo de UI para usuario vs. admin.
-
-- **`admin-panel.html` / `admin-panel.js`**  
-  Panel de administración:  
-  - Dashboard con métricas: usuarios, nuevos de la semana, productos, mensajes.  
-  - Gestión de usuarios (búsqueda, filtro por rol, edición, eliminación con modal y paginación).  
-  - Listado de productos.  
-  - Registro de actividad (usuarios/productos/mensajes recientes).
-
-- **Hojas de estilo**  
-  `styles.css`, `product-detail.css`, `chat.css`, `settings.css`, `admin-panel.css` - Estilos base y específicos de cada vista.
-
-- **`favicon.svg`**  
-  Icono del sitio.
-
-- **`public/uploads/`**  
-  Directorio de imágenes subidas de productos (se crea automáticamente si no existe).
+Las variables definidas por el sistema tienen prioridad sobre los valores del
+archivo `.env`, lo que permite configurar despliegues sin modificar archivos.
 
 ---
 
-## API (resumen)
+## Estructura del proyecto
 
-> Todas las rutas protegidas requieren encabezado `Authorization: Bearer <token>`.
+```text
+.
+├── .env.example                  # Plantilla de configuración local
+├── README.md                     # Documentación principal
+├── backend/
+│   ├── requirements.txt          # Dependencias Python
+│   └── app/
+│       ├── main.py               # Ensamblado y arranque de FastAPI
+│       ├── core/                 # Configuración, JWT, hash y excepciones
+│       ├── database/             # Engine, sesiones e inicialización SQLite
+│       ├── dependencies/         # Usuario autenticado y rol admin
+│       ├── models/               # Entidades ORM SQLAlchemy
+│       ├── repositories/         # Consultas y persistencia
+│       ├── routers/              # Endpoints HTTP
+│       ├── schemas/              # Validación y respuestas Pydantic
+│       └── services/             # Lógica de negocio
+├── frontend/                     # Submódulo con la SPA Svelte 5
+├── src/                          # Backend Express anterior, conservado como referencia
+├── package.json                  # Dependencias del backend Express anterior
+└── start.sh                      # Script del backend Express anterior
+```
 
-### GraphQL (`/graphql`)
-API principal para e-commerce.
-- **Queries**: `products`, `product(id)`, `myCart`, `myOrders`, `orders` (admin), `order(id)` (admin).
-- **Mutations**: `addToCart`, `updateCartItem`, `removeFromCart`, `checkout`, `setOrderStatus` (admin).
+El backend vigente se ejecuta desde `backend/` con Uvicorn. Los archivos
+Node.js de la raíz pertenecen a la implementación previa y no son necesarios
+para arrancar la API FastAPI.
 
-### REST API
-- **Auth**
-  - `POST /api/auth/register` - Registro (fuerza rol `user`).
-  - `POST /api/auth/login` - Login con email/contraseña.
-  - `GET  /api/auth/verify` - Devuelve datos del usuario autenticado.
+### Frontend Svelte
 
-- **Productos**
-  - `GET  /api/products` - Listar productos (público).
-  - `GET  /api/products/:id` - Detalle (público).
-  - `POST /api/products` - Crear (admin). Admite JSON o `multipart/form-data` con `image`.
-  - `PUT  /api/products/:id` - Actualizar (admin). Admite JSON o `multipart/form-data`.
-  - `POST /api/products/:id/image` - Actualizar imagen (admin).
-  - `DELETE /api/products/:id` - Eliminar (admin).
+El submódulo `frontend/` contiene una SPA construida con Svelte 5 y Vite:
 
-- **Usuarios**
-  - `GET  /api/users` - Listar usuarios (solo admin).
-  - `GET  /api/users/profile` - Perfil del autenticado.
-  - `PUT  /api/users/profile` - Actualizar nombre.
-  - `PUT  /api/users/profile-color` - Actualizar gradiente del avatar.
-  - `POST /api/users/change-password` - Cambiar contraseña.
-  - `DELETE /api/users/account` - Eliminar cuenta del autenticado.
+- Stores reactivos para autenticación, productos, usuarios y notificaciones.
+- Cliente HTTP centralizado que añade `Authorization: Bearer <token>`.
+- Formularios de login, registro, perfil y CRUD de productos.
+- Protección de rutas y operaciones administrativas por rol.
+- Gestión de sesión mediante `localStorage`.
+- Subida de imágenes mediante `FormData`.
 
-- **Chat**
-  - `GET  /api/chat/conversations` - Conversaciones del usuario/admin.
-  - `GET  /api/chat/messages/:conversationId` - Mensajes de una conversación.
-  - `POST /api/chat/start-conversation` - Iniciar conversación con usuario específico.
-  - `DELETE /api/chat/messages` - Limpiar historial (solo admin).
+---
 
-- **Admin**
-  - `GET  /api/admin/stats` - Estadísticas.
-  - `GET  /api/admin/users` - Usuarios (paginación y filtros).
-  - `PUT  /api/admin/users/:id` - Actualizar usuario.
-  - `DELETE /api/admin/users/:id` - Eliminar usuario.
-  - `GET  /api/admin/products` - Productos (paginación).
-  - `GET  /api/admin/activity` - Actividad reciente.
+## Arquitectura del backend
+
+El backend sigue una arquitectura por capas para evitar mezclar HTTP, lógica
+de negocio y persistencia.
+
+### `app/main.py`
+
+Punto de entrada de FastAPI:
+
+- Crea las tablas SQLite al iniciar la aplicación.
+- Inserta usuarios y productos de ejemplo si la base de datos está vacía.
+- Registra routers y manejadores globales de errores.
+- Configura CORS.
+- Publica las imágenes locales bajo `/uploads`.
+
+### `app/core/`
+
+- **`config.py`**: carga `.env` y centraliza ajustes de base de datos, JWT y
+  subida de imágenes.
+- **`security.py`**: hash y verificación de contraseñas con bcrypt; creación y
+  validación de tokens JWT con expiración.
+- **`exceptions.py`**: excepciones de aplicación y respuestas JSON coherentes
+  para errores de validación, autenticación, autorización, negocio y base de
+  datos.
+
+### `app/database/`
+
+- **`base.py`**: base declarativa SQLAlchemy.
+- **`session.py`**: engine y sesión de base de datos por petición.
+- **`init_db.py`**: creación de tablas e inserción inicial de datos de prueba.
+
+### `app/models/`
+
+- **`User`**: nombre, email único, hash de contraseña, rol (`user` o `admin`),
+  color de perfil y fechas de creación/actualización.
+- **`Product`**: nombre, precio, descripción, imagen, estado activo, creador y
+  fechas de creación/actualización.
+
+### `app/repositories/`
+
+Encapsulan el acceso a SQLAlchemy:
+
+- Búsqueda por ID y email.
+- Listado, paginación y filtros de usuarios.
+- Contadores para estadísticas administrativas.
+- CRUD de productos.
+
+Los routers no consultan directamente la base de datos.
+
+### `app/services/`
+
+Contienen la lógica de negocio:
+
+- Registro, login y verificación de sesión.
+- Gestión del perfil y contraseña.
+- Gestión administrativa de usuarios.
+- CRUD de productos y almacenamiento de imágenes.
+- Serialización compatible con el contrato esperado por Svelte.
+
+### `app/routers/`
+
+Gestionan exclusivamente HTTP:
+
+- Parámetros de ruta y query string.
+- Dependencias de autenticación y roles.
+- Parsing de JSON y `multipart/form-data`.
+- Códigos HTTP y modelos de respuesta.
+- Delegación de operaciones a services.
+
+---
+
+## API REST
+
+> Todas las rutas protegidas requieren el encabezado
+> `Authorization: Bearer <token>`.
+
+### Raíz
+
+| Método | Ruta | Acceso | Descripción |
+| --- | --- | --- | --- |
+| `GET` | `/` | Público | Comprueba que la API está disponible. |
+
+### Autenticación
+
+| Método | Ruta | Acceso | Descripción |
+| --- | --- | --- | --- |
+| `POST` | `/api/auth/register` | Público | Registra un usuario con rol `user` y devuelve un JWT. |
+| `POST` | `/api/auth/login` | Público | Valida email y contraseña; devuelve JWT y usuario. |
+| `GET` | `/api/auth/verify` | Autenticado | Valida el token y devuelve el usuario actual. |
+
+### Productos
+
+| Método | Ruta | Acceso | Descripción |
+| --- | --- | --- | --- |
+| `GET` | `/api/products` | Público | Lista productos. |
+| `GET` | `/api/products/{id}` | Público | Devuelve el detalle de un producto. |
+| `POST` | `/api/products` | `admin` | Crea un producto. Acepta JSON o `multipart/form-data`. |
+| `PUT` | `/api/products/{id}` | `admin` | Actualiza un producto. Acepta JSON o `multipart/form-data`. |
+| `POST` | `/api/products/{id}/image` | `admin` | Sustituye la imagen mediante `multipart/form-data`. |
+| `DELETE` | `/api/products/{id}` | `admin` | Elimina un producto. |
+
+### Perfil de usuario
+
+| Método | Ruta | Acceso | Descripción |
+| --- | --- | --- | --- |
+| `GET` | `/api/users/profile` | Autenticado | Devuelve el perfil actual. |
+| `PUT` | `/api/users/profile` | Autenticado | Actualiza el nombre del perfil. |
+| `PUT` | `/api/users/profile-color` | Autenticado | Cambia el gradiente del avatar. |
+| `POST` | `/api/users/change-password` | Autenticado | Cambia la contraseña tras verificar la actual. |
+| `DELETE` | `/api/users/account` | Autenticado | Elimina la cuenta tras verificar la contraseña. |
+| `GET` | `/api/users/gradients` | Público | Lista los gradientes de perfil disponibles. |
+
+### Administración
+
+| Método | Ruta | Acceso | Descripción |
+| --- | --- | --- | --- |
+| `GET` | `/api/admin/stats` | `admin` | Devuelve estadísticas de usuarios y productos. |
+| `GET` | `/api/admin/users` | `admin` | Lista usuarios con paginación, búsqueda y filtro de rol. |
+| `POST` | `/api/admin/users` | `admin` | Crea un usuario con rol configurable. |
+| `PUT` | `/api/admin/users/{id}` | `admin` | Actualiza nombre o rol de un usuario. |
+| `DELETE` | `/api/admin/users/{id}` | `admin` | Elimina un usuario. |
+| `GET` | `/api/users` | `admin` | Ruta heredada compatible para listar usuarios. |
+
+### Formato de errores
+
+Las respuestas de error mantienen una estructura uniforme:
+
+```json
+{
+  "success": false,
+  "message": "Producto no encontrado",
+  "error": "Producto no encontrado",
+  "status_code": 404
+}
+```
+
+Los errores de validación incluyen además `details` y `errors`.
 
 ---
 
 ## Credenciales de ejemplo
 
-Con el seed de datos:
+Cuando la base de datos está vacía, el arranque crea automáticamente:
 
-- **Admin**: `admin@test.com` / `admin123`  
-- **Usuario**: `user@test.com` / `user123`
+| Rol | Email | Contraseña |
+| --- | --- | --- |
+| Admin | `admin@test.com` | `admin123` |
+| Usuario | `user@test.com` | `user123` |
 
----
-
-## Decisiones de diseño y consideraciones técnicas
-
-- **JWT como mecanismo de autenticación**
-  Simplicidad y compatibilidad con SPA + Socket.IO. El token se envía en `Authorization` y también en el handshake del socket.
-
-- **Separación de responsabilidades**
-  - Modelos Mongoose encapsulan validaciones y hooks.
-  - Rutas por dominio funcional (`auth`, `products`, `users`, `chat`, `admin`).  
-  - Middlewares horizontales para autenticación, errores y rate limiting.  
-  - Utilidades para validación/sanitización y logging.
-
-- **Chat con Socket.IO y conversación determinística**  
-  `conversationId` se construye con los IDs ordenados (`user_admin`) para evitar duplicados.  
-  Se mantiene un mapa en memoria para asignar admins a usuarios (re-asignación automática si un admin se desconecta).  
-  Indicadores de escritura con TTL para evitar estados “atascados”.
-
-- **Validación y sanitización**  
-  - En backend: `validators.js` valida producto, URL y sanea `name/description`.  
-  - En frontend: `escapeHtml()` en renderizado para reducir riesgos XSS.  
-  - Límite de tamaño y tipos de archivo para imágenes; directorio de `uploads` local.
-
-- **Rendimiento de consultas de chat**  
-  Índices en `Message` (`conversationId`, `timestamp`) y agregaciones (`$group`, `$lookup`) para listar conversaciones del admin sin N+1 queries.  
-  En la carga del historial se limita el número de mensajes.
-
-- **Seguridad en producción**  
-  `server.js` fuerza a configurar `JWT_SECRET` cuando `NODE_ENV !== 'development'`.  
-  `Helmet` endurece cabeceras; CSP desactivada por compatibilidad con desarrollo y recursos embebidos.  
-  Rate limiting diferenciado para rutas sensibles (`/auth`) y API general.
-
-- **Subida de imágenes simple y predecible**  
-  `express-fileupload` con `tempFileDir`, validación de mimetype y tamaño, y nombres únicos por timestamp.  
-  Se acepta mantener la imagen como ruta relativa (`/uploads/...`) o URL absoluta.
-
-- **Frontend sin framework**  
-  Se ha priorizado JavaScript vanilla para reducir dependencias y mantener un bundle mínimo.  
-  La UI implementa modales accesibles, paginación y feedback de estado.
-
-- **IDs fijos en *seed***  
-  Facilitan pruebas reproducibles (mensajes y relaciones `createdBy/recipient`). Las contraseñas en el *seed* se almacenan en claro pero se hashean automáticamente por el hook del modelo `User`.
-
-- **Límites y simplificaciones conscientes**  
-  - Rate limiter en memoria (suficiente para desarrollo/pruebas; para producción, Redis o similar).  
-  - No se eliminan archivos físicos de imagen al borrar productos (puede añadirse una GC periódica).  
-  - Las asignaciones de admins a usuarios se almacenan en memoria; en escenarios multi-nodo requerirían un almacén compartido.
+También se insertan tres productos de ejemplo para facilitar la comprobación
+del listado y del panel administrativo.
 
 ---
 
-## Detalles de Implementación GraphQL
+## Compatibilidad con el frontend Svelte
 
-### Eschema y Tipos
-El esquema GraphQL se ha diseñado para cubrir las necesidades del e-commerce manteniendo la consistencia con los modelos de Mongoose.
+La API mantiene las estructuras que espera el frontend existente:
 
-- **Types Principales**:
-  - `Product`: Espejo del modelo MongoDB. Campos: `id`, `name`, `description`, `price`, `image`, `stock`.
-  - `Order`: Representa una compra finalizada. Contiene `items` (snapshot), `total`, `status` y referencia al `user`.
-  - `Cart`: Estructura embebida en el usuario. Calcula dinámicamente el `total` sumando sus `items`.
-  - `User`: Expone datos seguros (no password). Incluye el campo `cart`.
+- Login y registro devuelven `{ success, message, token, user }`.
+- El token se recibe mediante `Authorization: Bearer <token>`.
+- Los listados de productos devuelven `{ success, products }`.
+- El detalle devuelve `{ success, product }`.
+- El listado administrativo devuelve `{ success, pagination, users }`.
+- Usuarios y productos exponen `id` y `_id` como strings para conservar
+  compatibilidad con vistas diseñadas originalmente para MongoDB.
+- Las propiedades serializadas mantienen nombres usados por el frontend, como
+  `profileColor`, `createdAt`, `updatedAt` y `createdBy`.
+- Crear y editar productos admite JSON o `multipart/form-data`, lo que permite
+  conservar la subida de imágenes desde `FormData`.
 
-### Decisiones de Diseño GraphQL
+---
 
-1. **Persistencia del Carrito (Server-side)**
-   - **Decisión**: Almacenar el carrito en el documento del `User` en MongoDB (`user.cart`), en lugar de LocalStorage o una colección separada.
-   - **Razón**: Permite persistencia entre sesiones y dispositivos. Si el usuario se loguea en otro navegador, su carrito sigue ahí.
-   - **Implementación**: El resolver `myCart` y la mutación `addToCart` leen/escriben directamente en `req.user.cart`.
+## Decisiones de diseño
 
-2. **Snapshot de Precios en Pedidos**
-   - **Decisión**: Al crear una orden (`checkout`), se copian los datos del producto (nombre, precio) en ese instante.
-   - **Razón**: Evita que cambios futuros en el precio de un producto afecten al historial de pedidos pasados. El `OrderItem` es inmutable respecto al catálogo.
+### FastAPI como framework HTTP
 
-3. **Autenticación Unificada**
-   - **Decisión**: Reutilizar el middleware de Express y el token JWT existente.
-   - **Implementación**: `ApolloServer` recibe el token en el contexto. Los resolvers verifican `context.user` y lanzan errores `UNAUTHENTICATED` o `FORBIDDEN` sin necesidad de lógica de auth adicional en GraphQL.
+FastAPI proporciona tipado, validación integrada, dependencias reutilizables y
+documentación OpenAPI automática. Los routers quedan limitados a aspectos HTTP
+y delegan la lógica de negocio en services.
 
-4. **Separación de Responsabilidades en Resolvers**
-   - Queries de Admin (`orders`, `users`) verifican explícitamente `role === 'admin'`.
-   - Queries de Usuario (`myOrders`, `myCart`) usan el ID del contexto para asegurar que cada usuario solo vea sus propios datos.
-   - Mutaciones como `setOrderStatus` están estrictamente limitadas a administradores.
+### SQLite con SQLAlchemy 2.0
 
-5. **Resolución de Campos Calculados**
-   - Campos como `Cart.total` o `OrderItem.lineTotal` se calculan en el resolver, asegurando que el frontend siempre reciba el valor aritméticamente correcto sin tener que replicar la lógica de negocio.
+SQLite evita depender de un servidor externo durante la práctica. SQLAlchemy
+centraliza la persistencia y permite sustituir la URL de conexión en `.env` si
+el proyecto requiere otra base de datos en el futuro.
+
+### Sesión por petición
+
+Cada request recibe una sesión SQLAlchemy mediante `Depends(get_db)`. La sesión
+se cierra al finalizar la petición y las consultas se concentran en
+repositories.
+
+### JWT y roles
+
+Los tokens incluyen ID, email, rol y expiración. Las rutas privadas reutilizan
+una dependencia que obtiene el usuario autenticado desde la base de datos. Las
+operaciones administrativas reutilizan `require_admin`.
+
+### Compatibilidad durante la migración
+
+La API serializa IDs relacionales de SQLite como strings y conserva también la
+clave `_id`. Esta adaptación permite migrar la persistencia sin exigir cambios
+innecesarios en el frontend creado para el backend anterior.
+
+### Subida de imágenes local
+
+Las imágenes se guardan en disco con nombres únicos. El backend valida tipo
+MIME, extensión y tamaño máximo antes de escribir el archivo y publica el
+directorio mediante `/uploads`.
+
+### Inicialización automática
+
+Las tablas y los datos mínimos de prueba se crean al arrancar la aplicación si
+la base de datos está vacía. Esto permite ejecutar y evaluar el proyecto sin un
+paso manual de seed.
 
 ---
 
 ## Dependencias y por qué se usan
 
-- **express**: framework HTTP minimalista para la API y servido de estáticos.  
-- **http**: servidor base requerido por Socket.IO.
-- **socket.io**: comunicación bidireccional en tiempo real (chat, typing, presencia).  
-- **mongoose**: ODM para MongoDB; esquemas, validaciones, hooks y agregaciones.  
-- **cors**: habilita orígenes cruzados cuando sea necesario.  
-- **helmet**: cabeceras de seguridad (X-Content-Type-Options, HSTS, etc.).  
-- **express-fileupload**: manejo sencillo de `multipart/form-data` para subir imágenes, con límites de tamaño y mimetype.  
-- **jsonwebtoken (jwt)**: emisión y verificación de tokens de acceso.  
-- **bcryptjs**: hash y verificación de contraseñas en `User`.  
-- **dotenv**: carga de variables de entorno desde `.env`.  
-- **path / fs**: manipulación de rutas de ficheros y persistencia de imágenes.
-- **graphql / @apollo/server**: API GraphQL para productos y pedidos.
-
-**Código propio**:
-- `middleware/rateLimiter.js`: limitador simple en memoria (por IP).  
-- `middleware/authenticateJWT.js`: autenticación y `requireAdmin`.  
-- `middleware/errorHandler.js`: 404 y manejador global.  
-- `utils/validators.js`: validación y sanitización; `utils/logger.js`: logging coloreado.
+| Dependencia | Uso |
+| --- | --- |
+| `fastapi` | Framework HTTP, routing, dependencias y OpenAPI. |
+| `uvicorn[standard]` | Servidor ASGI para ejecutar FastAPI. |
+| `sqlalchemy` | ORM y acceso a SQLite mediante patrones SQLAlchemy 2.0. |
+| `pydantic[email]` | Validación de payloads, respuestas y emails. |
+| `passlib[bcrypt]` | API de hash y verificación de contraseñas. |
+| `bcrypt` | Implementación del algoritmo de hash de contraseñas. |
+| `PyJWT` | Creación y validación de tokens JWT. |
+| `python-multipart` | Lectura de formularios y subida de imágenes. |
+| `python-dotenv` | Carga automática de configuración desde `.env`. |
 
 ---
 
 ## Seguridad, validación y límites
 
-- **Autenticación**: JWT con expiración (`jwtExpiresIn = 24h`), validado en cada ruta protegida y en el handshake de Socket.IO.  
-- **Autorización**: `requireAdmin` para acciones sensibles (CRUD de productos, endpoints de administración y limpieza de mensajes).  
-- **Rate limiting**:  
-  - General: 300 req/5 min.  
-  - Auth: 5 intentos de login/5 min.  
-  - API: 250 req/5 min.  
-- **Subida de archivos**: solo `jpeg/png/gif/webp` y ≤ 5 MB.  
-- **XSS**: sanitización de entrada en backend y `escapeHtml` en render de frontend.  
-- **CSP**: desactivada en `helmet` para facilitar desarrollo; ajustar en producción si se desea una política estricta.
+- Las contraseñas nunca se almacenan en texto plano; se guardan como hash
+  bcrypt.
+- Los JWT tienen expiración configurable y se validan antes de acceder a rutas
+  privadas.
+- Las acciones administrativas requieren un usuario autenticado con rol
+  `admin`.
+- Un administrador no puede degradar su propio rol ni eliminar su propia
+  cuenta desde el panel administrativo.
+- Pydantic valida emails, longitudes, tipos, precios no negativos y rangos de
+  color de perfil.
+- Las imágenes admitidas son `jpeg`, `png`, `gif` y `webp`, con un máximo de
+  5 MB.
+- Las excepciones globales no exponen trazas internas al frontend.
+- CORS está abierto durante el desarrollo. En producción debe restringirse a
+  los orígenes autorizados.
+- La clave de ejemplo `JWT_SECRET` debe sustituirse antes de desplegar.
+
+---
+
+## Notas de desarrollo
+
+### Reiniciar la base de datos
+
+Detén el backend, elimina el archivo SQLite y vuelve a arrancar Uvicorn:
+
+```bash
+rm backend/app.db
+```
+
+La aplicación recreará las tablas, usuarios y productos de ejemplo.
+
+### Directorio de imágenes
+
+Por defecto, las imágenes se escriben en:
+
+```text
+backend/app/static/uploads/
+```
+
+El directorio se crea automáticamente. Puede cambiarse mediante `UPLOAD_DIR`.
+
+### Alcance de la migración
+
+El backend FastAPI implementa el contrato REST consumido por el submódulo
+Svelte actual: autenticación, productos, perfil y administración de usuarios.
+Los archivos del backend Express anterior permanecen en la raíz como referencia
+histórica, pero no forman parte del arranque FastAPI.
